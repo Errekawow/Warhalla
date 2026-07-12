@@ -235,6 +235,8 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let sb = null;
 let ME = null;
 let IS_ADMIN = false;
+let ENTERING = false;   // evita que enter() se ejecute dos veces a la vez
+let CHANNEL = null;     // canal de tiempo real (uno solo)
 const state = {
   settings:{ guild_name:'Walhalla', dkp_default:15, classes:[], roles:[], ranks:[] },
   profiles:[], events:[], signups:[], dkpLog:[], auctions:[], bids:[],
@@ -286,10 +288,15 @@ async function boot(){
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   renderLoading();
   const { data:{ session } } = await sb.auth.getSession();
-  sb.auth.onAuthStateChange((_e, s)=>{ if(s && !ME) enter(s); if(!s){ ME=null; IS_ADMIN=false; renderLogin(); } });
+  sb.auth.onAuthStateChange((_e, s)=>{
+    if(s){ if(!ME && !ENTERING) enter(s); }
+    else { ME=null; IS_ADMIN=false; CHANNEL=null; renderLogin(); }
+  });
   if(session) enter(session); else renderLogin();
 }
 async function enter(session){
+  if(ENTERING) return;      // ya hay una entrada en curso
+  ENTERING = true;
   renderLoading();
   try{
     await ensureProfile(session.user);
@@ -297,6 +304,7 @@ async function enter(session){
     subscribeRealtime();
     render();
   }catch(err){ console.error(err); renderFatal('Error al cargar el gremio: '+(err.message||err)); }
+  finally{ ENTERING = false; }
 }
 async function ensureProfile(user){
   const meta = user.user_metadata||{};
@@ -339,15 +347,22 @@ async function refetch(what){
   else if(!MODAL.type) render();
 }
 function subscribeRealtime(){
-  sb.channel('walhalla-live')
-    .on('postgres_changes',{event:'*',schema:'public',table:'events'},()=>refetch('events'))
-    .on('postgres_changes',{event:'*',schema:'public',table:'signups'},()=>refetch('signups'))
-    .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},()=>refetch('profiles'))
-    .on('postgres_changes',{event:'*',schema:'public',table:'settings'},()=>refetch('settings'))
-    .on('postgres_changes',{event:'*',schema:'public',table:'dkp_log'},()=>refetch('dkp_log'))
-    .on('postgres_changes',{event:'*',schema:'public',table:'auctions'},()=>refetch('auctions'))
-    .on('postgres_changes',{event:'*',schema:'public',table:'bids'},()=>refetch('bids'))
-    .subscribe();
+  if(CHANNEL) return;   // ya suscrito: nunca dos veces
+  try{
+    CHANNEL = sb.channel('walhalla-live')
+      .on('postgres_changes',{event:'*',schema:'public',table:'events'},()=>refetch('events'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'signups'},()=>refetch('signups'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},()=>refetch('profiles'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'settings'},()=>refetch('settings'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'dkp_log'},()=>refetch('dkp_log'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'auctions'},()=>refetch('auctions'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'bids'},()=>refetch('bids'))
+      .subscribe();
+  }catch(err){
+    // El tiempo real es un extra: si falla, la app sigue funcionando (con recarga manual)
+    console.warn('Tiempo real no disponible:', err);
+    CHANNEL = null;
+  }
 }
 function signOut(){ sb.auth.signOut(); }
 
