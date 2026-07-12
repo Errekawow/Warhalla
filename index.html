@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Walhalla · Mesa de Guerra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --stone:#0d1015; --stone-2:#141922; --stone-3:#1c232f; --stone-4:#252e3c;
+    --line:#2c3644; --line-2:#3a4759;
+    --gold:#c9a24e; --gold-bright:#e7c877; --gold-dim:#8a7538;
+    --steel:#6f97b8; --frost:#8fc4d6;
+    --blood:#b04038; --blood-dim:#7a2d28;
+    --moss:#7fa062; --amber:#d69a4c; --violet:#a98fd0;
+    --parch:#e7e0d2; --parch-dim:#b6b0a2; --muted:#7f8896; --muted-2:#5c6472;
+    --tank:#6f97b8; --heal:#7fa062; --dps:#c07a55; --supp:#a98fd0;
+    --shadow:0 10px 30px rgba(0,0,0,.45); --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:
+      radial-gradient(1200px 600px at 50% -8%, rgba(201,162,78,.07), transparent 60%),
+      radial-gradient(900px 500px at 90% 110%, rgba(111,151,184,.06), transparent 60%),
+      var(--stone);
+    color:var(--parch); font-family:'Inter',system-ui,sans-serif; font-size:15px; line-height:1.5;
+    -webkit-text-size-adjust:100%; min-height:100vh;}
+  a{color:var(--frost)}
+  h1,h2,h3{font-family:'Cinzel',serif; letter-spacing:.02em; margin:0}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .muted{color:var(--muted)}
+  button{font-family:inherit}
+
+  header{position:sticky; top:0; z-index:40; background:linear-gradient(180deg, rgba(13,16,21,.98), rgba(13,16,21,.9));
+    border-bottom:1px solid var(--line); backdrop-filter:blur(8px);}
+  .bar{max-width:1180px; margin:0 auto; padding:14px 18px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .brand{display:flex; align-items:center; gap:12px; min-width:0}
+  .sigil{width:42px;height:42px;flex:0 0 42px;border-radius:9px;position:relative;
+    background:radial-gradient(circle at 30% 25%, #2a3342, #10141b); border:1px solid var(--line-2); display:grid;place-items:center;
+    box-shadow:inset 0 1px 0 rgba(231,200,119,.15), 0 3px 10px rgba(0,0,0,.5);}
+  .sigil svg{width:24px;height:24px}
+  .brand h1{font-size:19px; color:var(--gold-bright); text-shadow:0 1px 0 #000; line-height:1}
+  .brand .sub{font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold-dim); font-weight:600}
+  .brand-txt{min-width:0}
+  .whoami{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .whoami .me{display:flex;align-items:center;gap:9px;background:var(--stone-2);border:1px solid var(--line);border-radius:22px;padding:5px 6px 5px 12px}
+  .whoami .me .n{font-size:13px;font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .badge-admin{font-size:9.5px;letter-spacing:.14em;font-weight:700;color:#1a140a;background:linear-gradient(180deg,var(--gold-bright),var(--gold));padding:2px 7px;border-radius:20px;text-transform:uppercase}
+
+  nav.tabs{max-width:1180px;margin:0 auto;padding:0 18px 12px;display:flex; gap:4px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none}
+  nav.tabs::-webkit-scrollbar{display:none}
+  .tab{appearance:none;border:1px solid transparent;background:transparent;color:var(--parch-dim);
+    padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13.5px;font-weight:600;white-space:nowrap;
+    display:flex;align-items:center;gap:7px;transition:.15s;}
+  .tab svg{width:16px;height:16px;opacity:.8}
+  .tab:hover{color:var(--parch);background:var(--stone-2)}
+  .tab.active{color:var(--stone);background:linear-gradient(180deg,var(--gold-bright),var(--gold));border-color:var(--gold-bright);box-shadow:0 2px 10px rgba(201,162,78,.25)}
+  .tab.active svg{opacity:1}
+
+  main{max-width:1180px;margin:0 auto;padding:22px 18px 80px 18px}
+  .view{animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+  .page-head h2{font-size:24px;color:var(--parch)}
+  .eyebrow{font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .eyebrow::before{content:"";width:18px;height:1px;background:linear-gradient(90deg,var(--gold),transparent)}
+
+  .btn{appearance:none;border:1px solid var(--line-2);background:var(--stone-3);color:var(--parch);
+    padding:9px 15px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13.5px;display:inline-flex;align-items:center;gap:8px;transition:.15s;white-space:nowrap}
+  .btn:hover{background:var(--stone-4)}
+  .btn svg{width:15px;height:15px}
+  .btn.gold{background:linear-gradient(180deg,var(--gold-bright),var(--gold));color:#1a140a;border-color:var(--gold-bright);font-weight:700}
+  .btn.gold:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent}
+  .btn.danger{border-color:var(--blood-dim);color:#e79a92}
+  .btn.danger:hover{background:rgba(176,64,56,.14)}
+  .btn.sm{padding:6px 10px;font-size:12.5px;border-radius:7px}
+  .btn.block{width:100%;justify-content:center}
+  .btn.discord{background:#5865F2;border-color:#5865F2;color:#fff}
+  .btn.discord:hover{filter:brightness(1.08)}
+  .icon-btn{appearance:none;background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;width:32px;height:32px;border-radius:7px;display:grid;place-items:center;transition:.15s}
+  .icon-btn:hover{color:var(--parch);background:var(--stone-3)}
+  .icon-btn svg{width:16px;height:16px}
+
+  .panel{background:linear-gradient(180deg,var(--stone-2),#11161e);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .panel-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .panel-h h3{font-size:14px;letter-spacing:.05em;color:var(--parch);text-transform:uppercase;display:flex;align-items:center;gap:9px}
+  .panel-h h3 .rune{color:var(--gold);font-size:15px}
+  .panel-b{padding:16px}
+  .grid{display:grid;gap:16px}
+  .g-3{grid-template-columns:repeat(3,1fr)} .g-2{grid-template-columns:repeat(2,1fr)} .g-dash{grid-template-columns:1.15fr .85fr}
+  @media(max-width:820px){.g-3{grid-template-columns:1fr 1fr}.g-2,.g-dash{grid-template-columns:1fr}}
+  @media(max-width:520px){.g-3{grid-template-columns:1fr}}
+  .stat{padding:16px}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--muted);font-weight:600}
+  .stat .v{font-family:'Cinzel',serif;font-size:30px;color:var(--gold-bright);line-height:1.1;margin-top:6px}
+  .stat .v small{font-size:14px;color:var(--muted);font-family:'Inter'}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--line-2);background:var(--stone-3);color:var(--parch-dim)}
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+  .role-tanque{color:#bcd6ea;border-color:rgba(111,151,184,.4);background:rgba(111,151,184,.12)} .role-tanque .dot{background:var(--tank)}
+  .role-sanador{color:#c3dcae;border-color:rgba(127,160,98,.4);background:rgba(127,160,98,.12)} .role-sanador .dot{background:var(--heal)}
+  .role-dps{color:#e6bda0;border-color:rgba(192,122,85,.4);background:rgba(192,122,85,.12)} .role-dps .dot{background:var(--dps)}
+  .role-support{color:#d3c3ef;border-color:rgba(169,143,208,.4);background:rgba(169,143,208,.12)} .role-support .dot{background:var(--supp)}
+  .rank-chip{font-family:'Cinzel',serif;letter-spacing:.03em;color:var(--gold);border-color:var(--gold-dim);background:rgba(201,162,78,.08)}
+  .dkp-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gold-bright)}
+  .pos{color:var(--moss)} .neg{color:#e79a92}
+  .lock{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+  .lock svg{width:12px;height:12px}
+
+  .rows{display:flex;flex-direction:column}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);transition:.12s}
+  .row:last-child{border-bottom:none}
+  .row:hover{background:rgba(255,255,255,.015)}
+  .row .name{font-weight:600;color:var(--parch)}
+  .row .grow{flex:1;min-width:0}
+  .avatar{width:34px;height:34px;flex:0 0 34px;border-radius:8px;display:grid;place-items:center;font-family:'Cinzel',serif;font-weight:700;font-size:14px;color:var(--stone);background:linear-gradient(180deg,var(--gold-bright),var(--gold-dim));box-shadow:inset 0 1px 0 rgba(255,255,255,.2);overflow:hidden}
+  .avatar img{width:100%;height:100%;object-fit:cover}
+  .sub-line{font-size:12.5px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px}
+  .me-row{border:1px solid var(--gold-dim)!important;border-radius:9px;background:rgba(201,162,78,.05)}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .search{flex:1;min-width:160px;display:flex;align-items:center;gap:8px;background:var(--stone-2);border:1px solid var(--line);border-radius:9px;padding:8px 12px}
+  .search svg{width:15px;height:15px;color:var(--muted)}
+  .search input{border:none;background:transparent;color:var(--parch);width:100%;outline:none;font-size:14px}
+  select.filter{appearance:none;background:var(--stone-2);border:1px solid var(--line);color:var(--parch-dim);padding:8px 30px 8px 12px;border-radius:9px;font-size:13.5px;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%237f8896' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
+  .empty{text-align:center;padding:44px 20px;color:var(--muted)}
+  .empty .rune{font-size:34px;color:var(--gold-dim);margin-bottom:10px}
+  .empty p{margin:6px 0 16px}
+
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px}
+  .cal-head .m{font-family:'Cinzel',serif;font-size:18px;color:var(--parch);text-transform:capitalize}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-dow{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);text-align:center;padding:4px 0;font-weight:700}
+  .cal-cell{min-height:86px;background:var(--stone-2);border:1px solid var(--line);border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:.12s;overflow:hidden}
+  .cal-cell:hover{border-color:var(--line-2)}
+  .cal-cell.out{opacity:.35;cursor:default}
+  .cal-cell.today{border-color:var(--gold-dim);box-shadow:inset 0 0 0 1px rgba(201,162,78,.25)}
+  .cal-cell .d{font-size:12px;color:var(--parch-dim);font-weight:700;font-family:'JetBrains Mono',monospace}
+  .cal-cell.today .d{color:var(--gold-bright)}
+  .ev-pill{font-size:11px;font-weight:600;padding:3px 6px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid var(--gold)}
+  .ev-pill.raid{background:rgba(201,162,78,.14);color:var(--gold-bright);border-color:var(--gold)}
+  .ev-pill.evento{background:rgba(111,151,184,.14);color:#bcd6ea;border-color:var(--steel)}
+  @media(max-width:640px){.cal-cell{min-height:60px}.ev-pill{font-size:0;padding:5px}.ev-pill::before{content:"●";font-size:11px}}
+
+  .signup-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .signup-row:last-child{border-bottom:none}
+  .react{display:flex;gap:5px;flex-wrap:wrap}
+  .react button{appearance:none;border:1px solid var(--line-2);background:var(--stone-3);color:var(--muted);padding:5px 9px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600;transition:.12s}
+  .react button:hover{color:var(--parch)}
+  .react button:disabled{opacity:.4;cursor:not-allowed}
+  .react button.on-conf{background:rgba(127,160,98,.2);color:#c3dcae;border-color:var(--moss)}
+  .react button.on-susp{background:rgba(214,154,76,.2);color:#e8c37f;border-color:var(--amber)}
+  .react button.on-tent{background:rgba(111,151,184,.2);color:#bcd6ea;border-color:var(--steel)}
+  .react button.on-aus{background:rgba(176,64,56,.2);color:#e79a92;border-color:var(--blood)}
+  .tally{display:flex;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
+  .tally .t{display:flex;align-items:center;gap:7px;font-size:13px}
+  .tally .t b{font-family:'JetBrains Mono',monospace;font-size:16px}
+
+  .overlay{position:fixed;inset:0;z-index:100;background:rgba(6,8,11,.72);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px 16px;overflow-y:auto;animation:fade .2s}
+  .modal{background:linear-gradient(180deg,var(--stone-2),#0f141b);border:1px solid var(--line-2);border-radius:14px;width:100%;max-width:560px;box-shadow:0 30px 70px rgba(0,0,0,.6);animation:pop .22s ease}
+  .modal.wide{max-width:720px}
+  .modal-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .modal-h h3{font-size:17px;color:var(--gold-bright)}
+  .modal-b{padding:18px;max-height:66vh;overflow-y:auto}
+  .modal-f{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600;margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;background:var(--stone);border:1px solid var(--line-2);color:var(--parch);padding:10px 12px;border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:.15s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold-dim);box-shadow:0 0 0 3px rgba(201,162,78,.12)}
+  .field input:disabled,.field select:disabled{opacity:.55;cursor:not-allowed}
+  .field textarea{resize:vertical;min-height:70px}
+  .field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%237f8896' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:480px){.field-row{grid-template-columns:1fr}}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg .opt{flex:1;min-width:90px;text-align:center;padding:9px;border:1px solid var(--line-2);border-radius:8px;cursor:pointer;font-weight:600;font-size:13.5px;color:var(--parch-dim);background:var(--stone);transition:.12s}
+  .seg .opt.sel{background:rgba(201,162,78,.14);border-color:var(--gold);color:var(--gold-bright)}
+  .tag-list{display:flex;flex-wrap:wrap;gap:8px}
+  .tag{display:inline-flex;align-items:center;gap:7px;background:var(--stone-3);border:1px solid var(--line-2);border-radius:20px;padding:5px 6px 5px 12px;font-size:13px;font-weight:600}
+  .tag button{appearance:none;border:none;background:transparent;color:var(--muted);cursor:pointer;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:14px;line-height:1}
+  .tag button:hover{background:var(--blood-dim);color:#f5d5d1}
+  .log-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .log-row:last-child{border-bottom:none}
+  .log-row .when{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);flex:0 0 92px}
+  .medal{font-family:'Cinzel',serif;font-weight:700;width:26px;text-align:center;color:var(--muted)}
+  .medal.g1{color:#e7c877} .medal.g2{color:#c3ccd6} .medal.g3{color:#c8925a}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--line-2),transparent);margin:20px 0}
+  .note{font-size:12.5px;color:var(--muted);background:var(--stone-2);border:1px solid var(--line);border-left:3px solid var(--gold-dim);border-radius:8px;padding:11px 13px;margin-top:4px}
+  .cls-block{border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:10px;background:var(--stone)}
+  .cls-block .top{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .cls-block .top .cn{font-family:'Cinzel',serif;font-size:15px;color:var(--gold-bright);flex:1}
+
+  .gate{min-height:100vh;display:grid;place-items:center;padding:24px}
+  .gate-card{max-width:440px;width:100%;text-align:center;background:linear-gradient(180deg,var(--stone-2),#0f141b);border:1px solid var(--line-2);border-radius:16px;padding:36px 28px;box-shadow:var(--shadow);animation:pop .3s}
+  .gate .sig{width:64px;height:64px;margin:0 auto 18px;border-radius:14px;background:radial-gradient(circle at 30% 25%, #2a3342, #10141b);border:1px solid var(--line-2);display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(231,200,119,.15)}
+  .gate .sig svg{width:36px;height:36px}
+  .gate h1{font-family:'Cinzel';font-size:30px;color:var(--gold-bright);margin-bottom:4px}
+  .gate .kicker{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold-dim);font-weight:700;margin-bottom:22px}
+  .gate p{color:var(--parch-dim);font-size:14px;margin:0 0 22px}
+  .setup-steps{text-align:left;font-size:13px;color:var(--parch-dim);margin:0;padding-left:20px}
+  .setup-steps li{margin:8px 0}
+  .code-inline{font-family:'JetBrains Mono';font-size:12px;background:var(--stone);border:1px solid var(--line-2);border-radius:6px;padding:2px 6px;color:var(--frost);word-break:break-all}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--stone-4);border:1px solid var(--line-2);color:var(--parch);padding:11px 18px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:var(--shadow);z-index:200;display:flex;align-items:center;gap:9px;animation:pop .25s;max-width:90vw}
+  .toast .rune{color:var(--gold-bright)} .toast.err{border-color:var(--blood-dim)} .toast.err .rune{color:#e79a92}
+  .spinner{width:26px;height:26px;border:3px solid var(--line-2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:20px auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="modal-root"></div>
+
+<script>
+/* ============================================================
+   WALHALLA — Gestor de gremio multiusuario (Supabase)
+   · Login con Discord
+   · Calendario / eventos / roster compartidos para todo el gremio
+   · DKP PRIVADO: cada jugador solo ve el suyo; el admin lo ve todo
+     (la privacidad la impone la base de datos, no la pantalla)
+   ------------------------------------------------------------
+   CONFIGURACIÓN: pega abajo tus 2 claves de Supabase
+   (Project URL y anon key). Vienen en GUIA-INSTALACION.md
+   ============================================================ */
+const SUPABASE_URL      = "https://fpadabyqsdmlvxsnawof.supabase.co";   // p.ej. https://abcd1234.supabase.co
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwYWRhYnlxc2RtbHZ4c25hd29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NzkzNDAsImV4cCI6MjA5OTQ1NTM0MH0.I-Zs1TBWCsiExFe2sTDO093qb-pmUnQyJ0BZva6oYmI";      // clave "anon public"
+
+let sb = null;
+let ME = null;
+let IS_ADMIN = false;
+const state = {
+  settings:{ guild_name:'Walhalla', dkp_default:15, classes:[], roles:[], ranks:[] },
+  profiles:[], events:[], signups:[], dkpLog:[], auctions:[], bids:[],
+  ui:{ view:'panel', calY:new Date().getFullYear(), calM:new Date().getMonth(), rosterSearch:'', rosterRole:'' }
+};
+const MODAL = { type:null, eventId:null };
+
+const $root = document.getElementById('root');
+const $mroot = document.getElementById('modal-root');
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayISO = ()=> new Date().toISOString().slice(0,10);
+const MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DOW=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+function fmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${+d} ${MONTHS[+m-1].slice(0,3)} ${y}`; }
+function fmtLong(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${+d} de ${MONTHS[+m-1]} de ${y}`; }
+function initials(n){ return (n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+function roleClass(role){ const x=(role||'').toLowerCase();
+  if(x.startsWith('tan'))return'role-tanque';
+  if(x.startsWith('san')||x.startsWith('heal')||x.startsWith('cura'))return'role-sanador';
+  if(x.startsWith('sup'))return'role-support';
+  return'role-dps'; }
+function ic(path,cls){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${cls?`class="${cls}"`:''}><path d="${path}"/></svg>`; }
+function profileById(id){ return state.profiles.find(p=>p.id===id); }
+function balance(uid){ return state.dkpLog.filter(l=>l.user_id===uid).reduce((s,l)=>s+l.amount,0); }
+function signupsFor(eid){ return state.signups.filter(s=>s.event_id===eid); }
+function statusOf(eid,uid){ const s=state.signups.find(x=>x.event_id===eid&&x.user_id===uid); return s?s.status:''; }
+function upcoming(){ const t=todayISO(); return [...state.events].filter(e=>e.date>=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)); }
+function classNames(){ return (state.settings.classes||[]).map(c=>c.name); }
+function specsOf(cls){ const c=(state.settings.classes||[]).find(x=>x.name===cls); return c?(c.specs||[]):[]; }
+function auctionById(id){ return state.auctions.find(a=>a.id===id); }
+function myBid(aid){ const b=state.bids.find(x=>x.auction_id===aid && x.user_id===ME.id); return b?b.amount:null; }
+function bidsFor(aid){ return state.bids.filter(b=>b.auction_id===aid).sort((a,b)=>b.amount-a.amount); }
+function openAuctions(){ return state.auctions.filter(a=>a.status==='open').sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||'')); }
+function closedAuctions(){ return state.auctions.filter(a=>a.status!=='open').sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||'')); }
+
+let toastT;
+function toast(msg,isErr){
+  clearTimeout(toastT); const old=document.querySelector('.toast'); if(old) old.remove();
+  const el=document.createElement('div'); el.className='toast'+(isErr?' err':'');
+  el.innerHTML=`<span class="rune">${isErr?'ᛜ':'ᛞ'}</span> ${esc(msg)}`; document.body.appendChild(el);
+  toastT=setTimeout(()=>el.remove(), isErr?3400:2200);
+}
+
+function configured(){ return SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length>20; }
+
+async function boot(){
+  if(!configured()){ renderSetup(); return; }
+  if(!window.supabase){ renderFatal('No se pudo cargar la librería de Supabase (¿sin conexión?).'); return; }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  renderLoading();
+  const { data:{ session } } = await sb.auth.getSession();
+  sb.auth.onAuthStateChange((_e, s)=>{ if(s && !ME) enter(s); if(!s){ ME=null; IS_ADMIN=false; renderLogin(); } });
+  if(session) enter(session); else renderLogin();
+}
+async function enter(session){
+  renderLoading();
+  try{
+    await ensureProfile(session.user);
+    await loadAll();
+    subscribeRealtime();
+    render();
+  }catch(err){ console.error(err); renderFatal('Error al cargar el gremio: '+(err.message||err)); }
+}
+async function ensureProfile(user){
+  const meta = user.user_metadata||{};
+  const name = meta.full_name || meta.name || meta.user_name || 'Nuevo guerrero';
+  const avatar = meta.avatar_url || null;
+  const { data } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if(!data){ await sb.from('profiles').insert({ id:user.id, display_name:name, avatar_url:avatar }); }
+  else if(!data.avatar_url && avatar){ await sb.from('profiles').update({ avatar_url:avatar }).eq('id', user.id); }
+  const { data:me } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  ME = me; IS_ADMIN = !!me.is_admin;
+}
+async function loadAll(){
+  const [set, profs, evs, sus, dkp, auc, bid] = await Promise.all([
+    sb.from('settings').select('*').eq('id',1).maybeSingle(),
+    sb.from('profiles').select('*').order('display_name'),
+    sb.from('events').select('*'),
+    sb.from('signups').select('*'),
+    sb.from('dkp_log').select('*'),
+    sb.from('auctions').select('*'),
+    sb.from('bids').select('*')
+  ]);
+  if(set.data) state.settings = { ...state.settings, ...set.data, classes:set.data.classes||[], roles:set.data.roles||[], ranks:set.data.ranks||[] };
+  state.profiles = profs.data||[];
+  state.events = evs.data||[];
+  state.signups = sus.data||[];
+  state.dkpLog = dkp.data||[];
+  state.auctions = auc.data||[];
+  state.bids = bid.data||[];
+}
+async function refetch(what){
+  if(what==='profiles') state.profiles=(await sb.from('profiles').select('*').order('display_name')).data||[];
+  if(what==='events')   state.events=(await sb.from('events').select('*')).data||[];
+  if(what==='signups')  state.signups=(await sb.from('signups').select('*')).data||[];
+  if(what==='dkp_log')  state.dkpLog=(await sb.from('dkp_log').select('*')).data||[];
+  if(what==='auctions') state.auctions=(await sb.from('auctions').select('*')).data||[];
+  if(what==='bids')     state.bids=(await sb.from('bids').select('*')).data||[];
+  if(what==='settings'){ const {data}=await sb.from('settings').select('*').eq('id',1).maybeSingle(); if(data) state.settings={...state.settings,...data,classes:data.classes||[],roles:data.roles||[],ranks:data.ranks||[]}; }
+  if(MODAL.type==='eventDetail' && (what==='signups'||what==='events')) eventDetailModal(MODAL.eventId);
+  else if(MODAL.type==='auctionBids' && (what==='bids'||what==='auctions')) auctionBidsModal(MODAL.eventId);
+  else if(!MODAL.type) render();
+}
+function subscribeRealtime(){
+  sb.channel('walhalla-live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'events'},()=>refetch('events'))
+    .on('postgres_changes',{event:'*',schema:'public',table:'signups'},()=>refetch('signups'))
+    .on('postgres_changes',{event:'*',schema:'public',table:'profiles'},()=>refetch('profiles'))
+    .on('postgres_changes',{event:'*',schema:'public',table:'settings'},()=>refetch('settings'))
+    .on('postgres_changes',{event:'*',schema:'public',table:'dkp_log'},()=>refetch('dkp_log'))
+    .on('postgres_changes',{event:'*',schema:'public',table:'auctions'},()=>refetch('auctions'))
+    .on('postgres_changes',{event:'*',schema:'public',table:'bids'},()=>refetch('bids'))
+    .subscribe();
+}
+function signOut(){ sb.auth.signOut(); }
+
+function sigilSVG(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="#e7c877" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 5 5 1-3.5 4 1 5.5L12 20l-5.5 2.5 1-5.5L4 8l5-1z"/></svg>`; }
+function renderLoading(){ $root.innerHTML=`<div class="gate"><div class="gate-card"><div class="sig">${sigilSVG()}</div><div class="spinner"></div><p class="muted">Abriendo las puertas del salón…</p></div></div>`; }
+function renderFatal(msg){ $root.innerHTML=`<div class="gate"><div class="gate-card"><div class="sig">${sigilSVG()}</div><h1>Walhalla</h1><p>${esc(msg)}</p><button class="btn gold block" onclick="location.reload()">Reintentar</button></div></div>`; }
+function renderLogin(){
+  $root.innerHTML=`<div class="gate"><div class="gate-card">
+    <div class="sig">${sigilSVG()}</div>
+    <h1>Walhalla</h1><div class="kicker">Mesa de Guerra</div>
+    <p>Entra con tu cuenta de Discord para unirte al salón, apuntarte a los asaltos y consultar tu honor.</p>
+    <button class="btn discord block" id="loginBtn">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.3 4.4A19.8 19.8 0 0015.4 3l-.2.5c1.8.4 2.6 1 3.5 1.6a13.3 13.3 0 00-10.4 0c.9-.7 1.9-1.2 3.5-1.6L11.6 3A19.8 19.8 0 003.7 4.4C1.2 8.1.6 11.7.9 15.3a20 20 0 006 3l.8-1.3c-.7-.3-1.4-.6-2-1l.5-.3a14.2 14.2 0 0012 0l.5.3c-.6.4-1.3.7-2 1l.8 1.3a20 20 0 006-3c.4-4.2-.6-7.8-3.5-10.9zM8.9 13.3c-.9 0-1.7-.9-1.7-2s.8-2 1.7-2 1.7.9 1.7 2-.8 2-1.7 2zm6.2 0c-.9 0-1.7-.9-1.7-2s.8-2 1.7-2 1.7.9 1.7 2-.8 2-1.7 2z"/></svg>
+      Entrar con Discord
+    </button>
+    <p class="muted" style="font-size:12px;margin-top:18px;margin-bottom:0">Tu cantidad de DKP es privada. Solo tú y la dirección del gremio podéis verla.</p>
+  </div></div>`;
+  document.getElementById('loginBtn').onclick=()=> sb.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: window.location.origin + window.location.pathname } });
+}
+function renderSetup(){
+  $root.innerHTML=`<div class="gate"><div class="gate-card" style="max-width:520px">
+    <div class="sig">${sigilSVG()}</div>
+    <h1>Walhalla</h1><div class="kicker">Falta configurar</div>
+    <p>Esta app necesita conectarse a tu base de datos (gratuita) para que todo el gremio comparta la información. Sigue la guía y luego pega tus 2 claves arriba del archivo:</p>
+    <ol class="setup-steps">
+      <li>Crea un proyecto gratis en <span class="code-inline">supabase.com</span>.</li>
+      <li>Ejecuta <span class="code-inline">walhalla-schema.sql</span> en el editor SQL.</li>
+      <li>Activa el proveedor <b>Discord</b> en Authentication → Providers.</li>
+      <li>Copia <b>Project URL</b> y <b>anon key</b> (Settings → API) y pégalas arriba en <span class="code-inline">SUPABASE_URL</span> y <span class="code-inline">SUPABASE_ANON_KEY</span>.</li>
+    </ol>
+    <p class="muted" style="font-size:12px;margin-top:18px;margin-bottom:0">Guía completa: <span class="code-inline">GUIA-INSTALACION.md</span></p>
+  </div></div>`;
+}
+
+function tabsFor(){
+  const base=[
+    {id:'panel',label:'Panel',icon:'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'},
+    {id:'roster',label:'Roster',icon:'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m8-3.13a4 4 0 10-6 0M12 7a4 4 0 100 .01'},
+    {id:'raids',label:'Calendario',icon:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
+    {id:'subastas',label:'Subastas',icon:'M14 13l-7 7M3 21h8M13 6l5 5M9.5 6.5l8 8 3-3-8-8zM6 10l5 5'},
+  ];
+  base.push({id:'cuenta',label:'Mi Cuenta',icon:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'});
+  if(IS_ADMIN){
+    base.push({id:'dkp',label:'DKP',icon:'M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z'});
+    base.push({id:'ajustes',label:'Ajustes',icon:'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7.7 1.6 1.6 0 01-3.2 0 1.6 1.6 0 00-2.7-.7l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.5-2.7 1.6 1.6 0 010-3.2 1.6 1.6 0 001.5-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 002.7-.7 1.6 1.6 0 013.2 0 1.6 1.6 0 002.7.7l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00.7 2.7 1.6 1.6 0 010 3.2z'});
+  }
+  return base;
+}
+function render(){
+  const av = ME.avatar_url ? `<img src="${esc(ME.avatar_url)}" alt="">` : initials(ME.display_name);
+  $root.innerHTML = `
+  <header>
+    <div class="bar">
+      <div class="brand">
+        <div class="sigil">${sigilSVG()}</div>
+        <div class="brand-txt"><h1>${esc(state.settings.guild_name||'Walhalla')}</h1><div class="sub">Mesa de Guerra</div></div>
+      </div>
+      <div class="whoami">
+        <div class="me">
+          <div class="avatar" style="width:26px;height:26px;flex-basis:26px;font-size:11px">${av}</div>
+          <span class="n">${esc(ME.display_name)}</span>
+          ${IS_ADMIN?'<span class="badge-admin">Admin</span>':''}
+        </div>
+        <button class="icon-btn" id="logoutBtn" title="Salir">${ic('M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9')}</button>
+      </div>
+    </div>
+    <nav class="tabs">${tabsFor().map(t=>`<button class="tab ${state.ui.view===t.id?'active':''}" data-tab="${t.id}">${ic(t.icon)}<span>${t.label}</span></button>`).join('')}</nav>
+  </header>
+  <main>${bodyFor()}</main>`;
+  document.getElementById('logoutBtn').onclick=signOut;
+}
+function bodyFor(){
+  const v=state.ui.view;
+  if(v==='panel') return viewPanel();
+  if(v==='roster') return viewRoster();
+  if(v==='raids') return viewRaids();
+  if(v==='subastas') return viewSubastas();
+  if(v==='cuenta'||v==='midkp') return viewMiCuenta();
+  if(v==='dkp' && IS_ADMIN) return viewDKP();
+  if(v==='ajustes' && IS_ADMIN) return viewAjustes();
+  return viewPanel();
+}
+
+function viewPanel(){
+  const next = upcoming()[0];
+  const myBal = balance(ME.id);
+  const myLog = [...state.dkpLog].filter(l=>l.user_id===ME.id).slice(-6).reverse();
+  const adminBlock = IS_ADMIN ? panelAdmin() : '';
+  const myFicha = `<div class="panel" style="margin-bottom:16px"><div class="panel-b" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div class="avatar" style="width:46px;height:46px;flex-basis:46px;font-size:17px">${ME.avatar_url?`<img src="${esc(ME.avatar_url)}">`:initials(ME.display_name)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:'Cinzel';font-size:19px;color:var(--gold-bright)">${esc(ME.display_name)}</div>
+        <div class="sub-line">
+          <span class="chip">${esc(ME.char_class||'Sin clase')}${ME.spec?' · '+esc(ME.spec):''}</span>
+          ${ME.role?`<span class="chip ${roleClass(ME.role)}"><span class="dot"></span>${esc(ME.role)}</span>`:''}
+          ${ME.rank?`<span class="chip rank-chip">${esc(ME.rank)}</span>`:''}
+        </div>
+      </div>
+      <button class="btn" data-edit-me>${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')} Editar mi ficha</button>
+    </div></div>`;
+  return `<div class="view">
+    <div class="eyebrow">Salón de mando</div>
+    <div class="page-head"><h2>Bienvenido a ${esc(state.settings.guild_name||'Walhalla')}</h2></div>
+    ${myFicha}
+    <div class="grid g-dash">
+      <div class="panel">
+        <div class="panel-h"><h3><span class="rune">ᛥ</span> Próxima convocatoria</h3>
+          ${IS_ADMIN?`<button class="btn sm gold" data-act="new-event">${ic('M12 5v14M5 12h14')} Convocar</button>`:''}</div>
+        <div class="panel-b">${ next ? nextEventBlock(next) : `<div class="empty"><div class="rune">ᛟ</div><p>No hay nada en el horizonte.</p></div>`}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3><span class="rune">ᛗ</span> Mi honor</h3><span class="lock">${ic('M5 11h14v10H5zM8 11V7a4 4 0 018 0v4')} privado</span></div>
+        <div class="panel-b">
+          <div style="text-align:center;padding:6px 0 14px">
+            <div class="dkp-val" style="font-size:44px">${myBal}</div>
+            <div class="muted" style="font-size:11px;letter-spacing:.16em;text-transform:uppercase">Tu DKP disponible</div>
+          </div>
+          ${myLog.length? `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600;margin-bottom:4px">Tus últimos movimientos</div>`+myLog.map(logRow).join('') : `<div class="empty muted" style="padding:14px">Aún sin movimientos.</div>`}
+        </div>
+      </div>
+    </div>
+    ${adminBlock}
+  </div>`;
+}
+function panelAdmin(){
+  const rank=[...state.profiles].map(p=>({p,b:balance(p.id)})).sort((a,b)=>b.b-a.b).slice(0,5);
+  const recent=[...state.dkpLog].sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).slice(-6).reverse();
+  return `<div class="grid g-3" style="margin:16px 0">
+      ${stat('Guerreros',state.profiles.length)}
+      ${stat('Eventos próximos',upcoming().length)}
+      ${stat('DKP en circulación',state.profiles.reduce((s,p)=>s+Math.max(0,balance(p.id)),0))}
+    </div>
+    <div class="grid g-dash">
+      <div class="panel">
+        <div class="panel-h"><h3><span class="rune">ᛗ</span> Cúspide de honor <span class="lock" style="margin-left:6px">(solo admin)</span></h3></div>
+        <div class="panel-b" style="padding:6px 8px">${rank.length? `<div class="rows">${rank.map((r,i)=>rankRow(r,i)).join('')}</div>`:'<div class="empty muted">Sin datos.</div>'}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h3><span class="rune">ᚱ</span> Movimientos recientes</h3><button class="btn sm ghost" data-tab="dkp">Libro completo</button></div>
+        <div class="panel-b">${recent.length? recent.map(logRow).join(''):'<div class="empty muted">El libro está en blanco.</div>'}</div>
+      </div>
+    </div>`;
+}
+function stat(k,v){ return `<div class="panel stat"><div class="k">${k}</div><div class="v">${v}</div></div>`; }
+function rankRow(r,i){ return `<div class="row"><div class="medal ${i<3?'g'+(i+1):''}">${i+1}</div>
+  <div class="avatar">${r.p.avatar_url?`<img src="${esc(r.p.avatar_url)}">`:initials(r.p.display_name)}</div>
+  <div class="grow"><div class="name">${esc(r.p.display_name)}</div>
+    <div class="sub-line">${r.p.role?`<span class="chip ${roleClass(r.p.role)}"><span class="dot"></span>${esc(r.p.role)}</span>`:''}</div></div>
+  <div class="dkp-val">${r.b}</div></div>`; }
+function nextEventBlock(e){
+  const c=signCounts(e);
+  return `<div style="cursor:pointer" data-open-event="${e.id}">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <span class="chip ${e.type==='Raid'?'rank-chip':''}">${esc(e.type)}</span>
+      <span class="muted mono" style="font-size:12.5px">${fmtLong(e.date)} · ${esc(e.time)}h</span></div>
+    <div style="font-family:'Cinzel';font-size:19px;color:var(--gold-bright);margin-bottom:10px">${esc(e.title)}</div>
+    <div class="tally">${tallyChips(c)}
+      <div class="t muted" style="margin-left:auto">Confirmados <b class="mono" style="color:var(--moss)">${c._total}</b>${e.size?` / ${e.size}`:''}</div></div>
+    ${e.notes?`<div class="note">${esc(e.notes)}</div>`:''}</div>`;
+}
+function logRow(l){
+  const p=profileById(l.user_id);
+  return `<div class="log-row">
+    <div class="when">${fmtDate(l.date)}</div>
+    <div class="avatar" style="width:28px;height:28px;flex-basis:28px;font-size:12px">${p&&p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p?p.display_name:'?')}</div>
+    <div class="grow"><span class="name" style="font-size:14px">${esc(p?p.display_name:'—')}</span>
+      <span class="muted" style="font-size:12.5px"> · ${esc(l.reason||'')}</span></div>
+    <div class="dkp-val ${l.amount>=0?'pos':'neg'}">${l.amount>=0?'+':''}${l.amount}</div></div>`;
+}
+
+function viewRoster(){
+  const q=(state.ui.rosterSearch||'').toLowerCase(); const rf=state.ui.rosterRole||'';
+  let list=[...state.profiles].filter(p=>
+    (!q || (p.display_name||'').toLowerCase().includes(q) || (p.char_class||'').toLowerCase().includes(q)) &&
+    (!rf || p.role===rf)).sort((a,b)=>(a.display_name||'').localeCompare(b.display_name||''));
+  return `<div class="view">
+    <div class="eyebrow">Compañía de guerra</div>
+    <div class="page-head"><h2>Roster · ${state.profiles.length} guerreros</h2></div>
+    <div class="toolbar">
+      <div class="search">${ic('M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.3-4.3')}
+        <input id="rosterQ" placeholder="Buscar por nombre o clase…" value="${esc(state.ui.rosterSearch||'')}"></div>
+      <select class="filter" id="rosterRole"><option value="">Todos los roles</option>
+        ${(state.settings.roles||[]).map(r=>`<option value="${esc(r)}" ${rf===r?'selected':''}>${esc(r)}</option>`).join('')}</select>
+    </div>
+    <div class="panel"><div class="panel-b" style="padding:6px 8px">
+      ${list.length? `<div class="rows">${list.map(rosterRow).join('')}</div>`
+      : `<div class="empty"><div class="rune">ᚹ</div><p>${state.profiles.length?'Nadie coincide con la búsqueda.':'Aún no ha entrado ningún guerrero. Comparte el enlace en Discord.'}</p></div>`}
+    </div></div>
+    <div class="note" style="margin-top:14px">Cada jugador aparece aquí al entrar con Discord y edita su propia ficha. ${IS_ADMIN?'Como admin puedes editar o expulsar a cualquiera.':''}</div>
+  </div>`;
+}
+function rosterRow(p){
+  const mine = p.id===ME.id;
+  const canEdit = mine || IS_ADMIN;
+  const showDkp = mine || IS_ADMIN;
+  return `<div class="row ${mine?'me-row':''}">
+    <div class="avatar">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
+    <div class="grow"><div class="name">${esc(p.display_name)} ${p.is_admin?'<span class="badge-admin" style="margin-left:4px">Admin</span>':''}</div>
+      <div class="sub-line">
+        <span class="chip">${esc(p.char_class||'—')}${p.spec?' · '+esc(p.spec):''}</span>
+        ${p.role?`<span class="chip ${roleClass(p.role)}"><span class="dot"></span>${esc(p.role)}</span>`:''}
+        ${p.rank?`<span class="chip rank-chip">${esc(p.rank)}</span>`:''}
+      </div></div>
+    ${showDkp?`<div style="text-align:right;margin-right:4px"><div class="dkp-val">${balance(p.id)}</div><div class="muted" style="font-size:10.5px;letter-spacing:.08em">DKP${mine&&!IS_ADMIN?' · tuyo':''}</div></div>`
+      :`<div class="lock" style="margin-right:6px">${ic('M5 11h14v10H5zM8 11V7a4 4 0 018 0v4')}</div>`}
+    ${canEdit?`<button class="icon-btn" data-edit-member="${p.id}" title="${mine?'Editar mi ficha':'Editar'}">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')}</button>`:''}
+  </div>`;
+}
+
+function signCounts(e){
+  const c={ _total:0 }; (state.settings.roles||[]).forEach(r=>c[r]=0);
+  signupsFor(e.id).forEach(s=>{ if(s.status!=='conf') return; const p=profileById(s.user_id); if(!p) return;
+    if(c[p.role]===undefined) c[p.role]=0; c[p.role]++; c._total++; });
+  return c;
+}
+function tallyChips(c){
+  return (state.settings.roles||[]).map(r=>`<div class="t"><span class="chip ${roleClass(r)}"><span class="dot"></span>${esc(r)}</span><b class="mono">${c[r]||0}</b></div>`).join('');
+}
+function viewRaids(){
+  const y=state.ui.calY, mo=state.ui.calM;
+  const first=new Date(y,mo,1); let startDow=(first.getDay()+6)%7;
+  const days=new Date(y,mo+1,0).getDate(); const prevDays=new Date(y,mo,0).getDate();
+  const key=`${y}-${String(mo+1).padStart(2,'0')}`; const evByDay={};
+  state.events.forEach(e=>{ if((e.date||'').startsWith(key)){ const d=+e.date.slice(-2); (evByDay[d]=evByDay[d]||[]).push(e);} });
+  const tISO=todayISO(); let cells='';
+  for(let i=0;i<startDow;i++) cells+=`<div class="cal-cell out"><div class="d">${prevDays-startDow+1+i}</div></div>`;
+  for(let d=1;d<=days;d++){
+    const iso=`${key}-${String(d).padStart(2,'0')}`;
+    const evs=(evByDay[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
+    cells+=`<div class="cal-cell ${iso===tISO?'today':''}" ${IS_ADMIN?`data-day="${iso}"`:''}>
+      <div class="d">${d}</div>
+      ${evs.map(e=>`<div class="ev-pill ${e.type.toLowerCase()==='raid'?'raid':'evento'}" data-open-event="${e.id}" title="${esc(e.title)}">${esc(e.time)} ${esc(e.title)}</div>`).join('')}</div>`;
+  }
+  const total=startDow+days; for(let i=0;i<(7-total%7)%7;i++) cells+=`<div class="cal-cell out"><div class="d">${i+1}</div></div>`;
+  const up=upcoming();
+  return `<div class="view">
+    <div class="eyebrow">Convocatorias</div>
+    <div class="page-head"><h2>Calendario de asaltos</h2>
+      ${IS_ADMIN?`<button class="btn gold" data-act="new-event">${ic('M12 5v14M5 12h14')} Convocar evento</button>`:''}</div>
+    <div class="panel"><div class="panel-b">
+      <div class="cal-head">
+        <button class="icon-btn" data-cal="-1">${ic('M15 18l-6-6 6-6')}</button>
+        <div class="m">${MONTHS[mo]} ${y}</div>
+        <button class="icon-btn" data-cal="1">${ic('M9 18l6-6-6-6')}</button></div>
+      <div class="cal-grid">${DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('')}${cells}</div>
+    </div></div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-h"><h3><span class="rune">ᛋ</span> Próximos eventos</h3></div>
+      <div class="panel-b" style="padding:6px 8px">
+        ${up.length? `<div class="rows">${up.map(e=>{const c=signCounts(e);const mine=statusOf(e.id,ME.id);return `
+          <div class="row" style="cursor:pointer" data-open-event="${e.id}">
+            <div class="avatar" style="${e.type==='Raid'?'':'background:linear-gradient(180deg,var(--steel),#2a4257)'}">${e.type==='Raid'?'⚔':'✦'}</div>
+            <div class="grow"><div class="name">${esc(e.title)}</div>
+              <div class="sub-line"><span class="mono">${fmtDate(e.date)} · ${esc(e.time)}h</span>
+                ${mine?`<span class="chip ${mine==='conf'?'role-sanador':''}">${mine==='conf'?'Vas':mine==='susp'?'Suplente':mine==='tent'?'Tal vez':'No vas'}</span>`:'<span class="chip">Sin responder</span>'}</div></div>
+            <div style="text-align:right"><div class="dkp-val" style="color:var(--moss)">${c._total}</div><div class="muted" style="font-size:10.5px">confirmados</div></div>
+          </div>`;}).join('')}</div>` : `<div class="empty muted">No hay convocatorias futuras.</div>`}
+      </div></div>
+  </div>`;
+}
+
+function viewDKP(){
+  const rank=[...state.profiles].map(p=>({p,b:balance(p.id)})).sort((a,b)=>b.b-a.b);
+  const log=[...state.dkpLog].sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).reverse();
+  return `<div class="view">
+    <div class="eyebrow">El libro de cuentas · solo dirección</div>
+    <div class="page-head"><h2>Puntos de Honor · DKP</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn gold" data-act="award">${ic('M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z')} Otorgar</button>
+        <button class="btn" data-act="spend">${ic('M20 12H4')} Gastar en botín</button></div></div>
+    <div class="grid g-2">
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᛗ</span> Clasificación</h3></div>
+        <div class="panel-b" style="padding:6px 8px">${rank.length? `<div class="rows">${rank.map((r,i)=>rankRow(r,i)).join('')}</div>`:'<div class="empty muted">Sin guerreros.</div>'}</div></div>
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᚱ</span> Movimientos</h3><span class="muted" style="font-size:12px">${state.dkpLog.length}</span></div>
+        <div class="panel-b" style="max-height:520px;overflow-y:auto">${log.length? log.map(logRow).join(''):'<div class="empty muted">El libro está en blanco.</div>'}</div></div>
+    </div>
+  </div>`;
+}
+
+function viewMiCuenta(){
+  const bal=balance(ME.id);
+  const log=[...state.dkpLog].filter(l=>l.user_id===ME.id).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).reverse();
+  const earned=log.filter(l=>l.amount>0).reduce((s,l)=>s+l.amount,0);
+  const spent=log.filter(l=>l.amount<0).reduce((s,l)=>s+l.amount,0);
+  const items=log.filter(l=>l.amount<0);
+  const myBids=[...state.bids].filter(b=>b.user_id===ME.id).sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||''));
+  return `<div class="view">
+    <div class="eyebrow">Tu cuenta · privada</div>
+    <div class="page-head"><h2>Mi Cuenta</h2><span class="lock">${ic('M5 11h14v10H5zM8 11V7a4 4 0 018 0v4')} Solo tú y la dirección veis esto</span></div>
+    <div class="grid g-3" style="margin-bottom:16px">
+      ${stat('DKP disponible',bal)} ${stat('Ganado',earned)} ${stat('Gastado',Math.abs(spent))}
+    </div>
+    <div class="grid g-2">
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᛜ</span> Mis objetos obtenidos</h3><span class="muted" style="font-size:12px">${items.length}</span></div>
+        <div class="panel-b" style="padding:6px 8px">${items.length? `<div class="rows">${items.map(l=>`
+          <div class="row"><div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:13px">⚔</div>
+            <div class="grow"><div class="name" style="font-size:14px">${esc(l.reason||'Objeto')}</div>
+              <div class="sub-line"><span class="mono">${fmtDate(l.date)}</span></div></div>
+            <div class="dkp-val neg">${l.amount}</div></div>`).join('')}</div>`
+          : `<div class="empty" style="padding:26px"><div class="rune">ᛜ</div><p>Aún no has ganado botín.</p></div>`}</div></div>
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᚷ</span> Mis pujas</h3><span class="muted" style="font-size:12px">${myBids.length}</span></div>
+        <div class="panel-b" style="padding:6px 8px">${myBids.length? `<div class="rows">${myBids.map(b=>{
+          const a=auctionById(b.auction_id); const st=!a?'?':a.status==='open'?'activa':(a.winner_id===ME.id?'ganada':'no adjudicada');
+          const col=st==='ganada'?'role-sanador':st==='activa'?'role-tanque':'';
+          return `<div class="row"><div class="grow"><div class="name" style="font-size:14px">${esc(a?a.item:'Subasta eliminada')}</div>
+              <div class="sub-line"><span class="chip ${col}">${st}</span></div></div>
+            <div style="text-align:right"><div class="dkp-val">${b.amount}</div><div class="muted" style="font-size:10.5px">tu puja</div></div></div>`;
+        }).join('')}</div>` : `<div class="empty" style="padding:26px"><div class="rune">ᚷ</div><p>No has pujado por nada todavía.</p></div>`}</div></div>
+    </div>
+    <div class="panel" style="margin-top:16px"><div class="panel-h"><h3><span class="rune">ᚱ</span> Mi historial de DKP</h3></div>
+      <div class="panel-b">${log.length? log.map(logRow).join('') : `<div class="empty"><div class="rune">ᚦ</div><p>Aún no tienes movimientos de DKP.<br>Apúntate y asiste a los asaltos para ganar honor.</p></div>`}</div></div>
+  </div>`;
+}
+
+function viewSubastas(){
+  const open=openAuctions(); const closed=closedAuctions();
+  return `<div class="view">
+    <div class="eyebrow">Botín · subasta a sobre cerrado</div>
+    <div class="page-head"><h2>Subastas de botín</h2>
+      ${IS_ADMIN?`<button class="btn gold" data-act="new-auction">${ic('M12 5v14M5 12h14')} Nueva subasta</button>`:''}</div>
+    <div class="note" style="margin-bottom:16px">Tu puja es <b>secreta</b>: nadie más ve cuánto ofreces, ni siquiera tu DKP. Gana la puja más alta cuando la dirección adjudique el objeto.</div>
+    <div class="panel"><div class="panel-h"><h3><span class="rune">ᚷ</span> Abiertas</h3></div>
+      <div class="panel-b" style="padding:6px 8px">
+        ${open.length? `<div class="rows">${open.map(auctionRow).join('')}</div>` : `<div class="empty"><div class="rune">ᚷ</div><p>No hay subastas abiertas ahora mismo.</p></div>`}
+      </div></div>
+    ${closed.length? `<div class="panel" style="margin-top:16px"><div class="panel-h"><h3><span class="rune">ᛚ</span> Adjudicadas</h3></div>
+      <div class="panel-b" style="padding:6px 8px"><div class="rows">${closed.map(auctionRow).join('')}</div></div></div>`:''}
+  </div>`;
+}
+function auctionRow(a){
+  const open=a.status==='open';
+  const mine=myBid(a.id);
+  const winner=a.winner_id?profileById(a.winner_id):null;
+  let right;
+  if(open){
+    if(IS_ADMIN){ right=`<button class="btn sm gold" data-view-bids="${a.id}">${ic('M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z')} ${bidsFor(a.id).length} puja(s)</button>`; }
+    else { right=`<button class="btn sm ${mine!=null?'':'gold'}" data-bid="${a.id}">${ic('M14 13l-7 7M13 6l5 5M9.5 6.5l8 8 3-3-8-8z')} ${mine!=null?'Cambiar puja':'Pujar'}</button>`; }
+  } else {
+    right=`<span class="chip role-sanador">${winner?'Ganada por '+esc(winner.display_name):'Cerrada'}</span>`;
+  }
+  return `<div class="row">
+    <div class="avatar" style="width:34px;${open?'':'opacity:.7'}">⚔</div>
+    <div class="grow"><div class="name">${esc(a.item)}</div>
+      <div class="sub-line">
+        ${a.min_bid?`<span class="chip">Mínimo ${a.min_bid}</span>`:''}
+        ${!open?'':(mine!=null?`<span class="chip role-tanque">Tu puja: ${mine}</span>`:'<span class="chip">Sin pujar</span>')}
+        ${a.notes?`<span class="muted" style="font-size:11.5px">${esc(a.notes)}</span>`:''}
+      </div></div>
+    ${right}
+    ${IS_ADMIN?`<button class="icon-btn" data-del-auction="${a.id}" title="Eliminar">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button>`:''}
+  </div>`;
+}
+
+function viewAjustes(){
+  return `<div class="view">
+    <div class="eyebrow">Forja del gremio · solo dirección</div>
+    <div class="page-head"><h2>Ajustes</h2></div>
+    <div class="grid g-2">
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᚨ</span> Identidad</h3></div>
+        <div class="panel-b">
+          <div class="field"><label>Nombre del gremio</label><input id="setName" value="${esc(state.settings.guild_name||'')}"></div>
+          <div class="field"><label>DKP por asistencia (predeterminado)</label><input id="setDkp" type="number" min="0" value="${state.settings.dkp_default||0}"></div>
+          <button class="btn gold" data-act="save-identity">${ic('M5 13l4 4L19 7')} Guardar</button>
+        </div></div>
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᛏ</span> Roles</h3></div>
+        <div class="panel-b">
+          <p class="muted" style="margin-top:0;font-size:12.5px">Ej.: Tanque, Sanador, DPS, Support. El nombre define su color y los recuentos de raid.</p>
+          ${tagEditor('roles')}
+        </div></div>
+    </div>
+    <div class="panel" style="margin-top:16px"><div class="panel-h"><h3><span class="rune">ᚲ</span> Clases y especializaciones</h3>
+        <button class="btn sm gold" data-act="add-class">${ic('M12 5v14M5 12h14')} Añadir clase</button></div>
+      <div class="panel-b">
+        <p class="muted" style="margin-top:0;font-size:12.5px">Crea aquí tus 21 clases custom con sus specs. Los jugadores elegirán de estas listas al editar su ficha.</p>
+        ${(state.settings.classes||[]).length? state.settings.classes.map((c,i)=>classBlock(c,i)).join('')
+          : `<div class="empty"><div class="rune">ᚲ</div><p>Sin clases todavía.</p><button class="btn gold" data-act="add-class">${ic('M12 5v14M5 12h14')} Crear la primera</button></div>`}
+      </div></div>
+    <div class="grid g-2" style="margin-top:16px">
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᚱ</span> Rangos</h3></div>
+        <div class="panel-b"><p class="muted" style="margin-top:0;font-size:12.5px">Del líder al recluta. Los rangos los asignas tú.</p>${tagEditor('ranks')}</div></div>
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᚦ</span> Administradores</h3></div>
+        <div class="panel-b"><p class="muted" style="margin-top:0;font-size:12.5px">Un admin ve el DKP de todos y gestiona el gremio. Edita a un guerrero en el Roster para darle o quitarle el rol.</p>
+          <div class="tag-list">${state.profiles.filter(p=>p.is_admin).map(p=>`<span class="tag">${esc(p.display_name)}</span>`).join('')||'<span class="muted" style="font-size:13px">Solo tú.</span>'}</div>
+        </div></div>
+    </div>
+  </div>`;
+}
+function tagEditor(field){
+  const items=state.settings[field]||[];
+  return `<div class="tag-list" style="margin-bottom:12px">
+      ${items.length? items.map((it,i)=>`<span class="tag">${esc(it)}<button data-del-tag="${field}:${i}" title="Quitar">×</button></span>`).join('') : '<span class="muted" style="font-size:13px">Vacío</span>'}
+    </div>
+    <div style="display:flex;gap:8px">
+      <input class="tagAdd" data-field="${field}" placeholder="Añadir…" style="flex:1;background:var(--stone);border:1px solid var(--line-2);color:var(--parch);padding:8px 11px;border-radius:8px;outline:none;font-size:13.5px">
+      <button class="btn sm gold" data-add-tag="${field}">${ic('M12 5v14M5 12h14')}</button>
+    </div>`;
+}
+function classBlock(c,i){
+  return `<div class="cls-block">
+    <div class="top"><span class="cn">${esc(c.name)}</span>
+      <button class="icon-btn" data-del-class="${i}" title="Eliminar clase">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button></div>
+    <div class="tag-list" style="margin-bottom:10px">
+      ${(c.specs||[]).length? c.specs.map((s,j)=>`<span class="tag" style="font-family:'Inter'">${esc(s)}<button data-del-spec="${i}:${j}">×</button></span>`).join('') : '<span class="muted" style="font-size:12.5px">Sin specs</span>'}
+    </div>
+    <div style="display:flex;gap:8px">
+      <input class="specAdd" data-ci="${i}" placeholder="Añadir spec…" style="flex:1;background:var(--stone-2);border:1px solid var(--line-2);color:var(--parch);padding:7px 11px;border-radius:7px;outline:none;font-size:13px">
+      <button class="btn sm" data-add-spec="${i}">${ic('M12 5v14M5 12h14')}</button>
+    </div></div>`;
+}
+
+function closeModal(){ MODAL.type=null; MODAL.eventId=null; $mroot.innerHTML=''; }
+function openModal(html,type){ MODAL.type=type||'form'; $mroot.innerHTML=`<div class="overlay" data-overlay>${html}</div>`;
+  const f=$mroot.querySelector('input,select,textarea'); if(f) setTimeout(()=>f.focus(),40); }
+$mroot.addEventListener('click',e=>{ if(e.target.dataset.overlay!==undefined) closeModal(); });
+function optionList(arr,sel){ return (arr||[]).map(o=>`<option value="${esc(o)}" ${o===sel?'selected':''}>${esc(o)}</option>`).join(''); }
+
+function memberModal(id){
+  const p = profileById(id) || ME;
+  const mine = p.id===ME.id;
+  const canAdmin = IS_ADMIN;
+  const classes = classNames();
+  const cls = p.char_class || classes[0] || '';
+  openModal(`<div class="modal"><div class="modal-h"><h3>${mine?'Mi ficha':'Editar guerrero'}</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Nombre en el gremio</label><input id="mName" value="${esc(p.display_name||'')}" placeholder="Tu nombre de personaje"></div>
+      <div class="field-row">
+        <div class="field"><label>Clase</label><select id="mCls">${optionList(classes,cls)}${classes.length?'':'<option value="">(sin clases)</option>'}</select></div>
+        <div class="field"><label>Especialización</label><select id="mSpec">${optionList(specsOf(cls),p.spec)}</select></div>
+      </div>
+      <div class="field"><label>Rol</label><select id="mRole">${optionList(state.settings.roles,p.role)}</select></div>
+      <div class="field"><label>Rango ${canAdmin?'':'<span class="lock">(lo asigna la dirección)</span>'}</label>
+        <select id="mRank" ${canAdmin?'':'disabled'}>${optionList(state.settings.ranks,p.rank)}</select></div>
+      ${canAdmin&&!mine?`<div class="field" style="margin-bottom:0"><label>Rol en la app</label>
+        <div class="seg" id="mAdmin"><div class="opt ${!p.is_admin?'sel':''}" data-adm="0">Jugador</div><div class="opt ${p.is_admin?'sel':''}" data-adm="1">Administrador</div></div></div>`:''}
+    </div>
+    <div class="modal-f">
+      ${canAdmin&&!mine?`<button class="btn danger" data-del-member="${p.id}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Expulsar</button>`:''}
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn gold" data-save-member="${p.id}">${ic('M5 13l4 4L19 7')} Guardar</button>
+    </div></div>`,'form');
+  const cs=$mroot.querySelector('#mCls'), ss=$mroot.querySelector('#mSpec');
+  if(cs) cs.addEventListener('change',()=>{ ss.innerHTML=optionList(specsOf(cs.value),''); });
+  const seg=$mroot.querySelector('#mAdmin'); if(seg) seg.addEventListener('click',e=>{const o=e.target.closest('[data-adm]');if(!o)return;seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
+}
+async function saveMember(id){
+  const name=($mroot.querySelector('#mName').value||'').trim(); if(!name){ toast('Ponle nombre'); return; }
+  const patch={ display_name:name, char_class:$mroot.querySelector('#mCls').value||null, spec:$mroot.querySelector('#mSpec').value||null, role:$mroot.querySelector('#mRole').value||null };
+  if(IS_ADMIN){ patch.rank=$mroot.querySelector('#mRank').value||null;
+    const seg=$mroot.querySelector('#mAdmin'); if(seg){ patch.is_admin = seg.querySelector('.opt.sel')?.dataset.adm==='1'; } }
+  const { error } = await sb.from('profiles').update(patch).eq('id', id);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); if(id===ME.id){ ME={...ME,...patch}; IS_ADMIN=!!ME.is_admin; } await refetch('profiles'); toast('Ficha guardada');
+}
+async function delMember(id){
+  const p=profileById(id); if(!p) return;
+  if(!confirm(`¿Expulsar a ${p.display_name}? Se borrará su DKP e inscripciones.`)) return;
+  const { error } = await sb.from('profiles').delete().eq('id', id);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('profiles'); toast('Guerrero expulsado');
+}
+
+function eventModal(e){
+  const edit=!!e; e=e||{type:'Raid',title:'',date:todayISO(),time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''};
+  openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar convocatoria':'Convocar evento'}</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Tipo</label><div class="seg" id="eType">
+        <div class="opt ${e.type==='Raid'?'sel':''}" data-type="Raid">⚔ Raid</div>
+        <div class="opt ${e.type==='Evento'?'sel':''}" data-type="Evento">✦ Evento</div></div></div>
+      <div class="field"><label>Título</label><input id="eTitle" value="${esc(e.title)}" placeholder="p.ej. Asalto al Salón de los Caídos"></div>
+      <div class="field-row">
+        <div class="field"><label>Fecha</label><input id="eDate" type="date" value="${e.date}"></div>
+        <div class="field"><label>Hora</label><input id="eTime" type="time" value="${e.time}"></div></div>
+      <div class="field-row">
+        <div class="field"><label>Plazas</label><input id="eSize" type="number" min="1" value="${e.size||''}" placeholder="20"></div>
+        <div class="field"><label>DKP por asistir</label><input id="eDkp" type="number" min="0" value="${e.dkp??state.settings.dkp_default}"></div></div>
+      <div class="field"><label>Notas</label><textarea id="eNotes" placeholder="Consumibles, tácticas, requisitos…">${esc(e.notes||'')}</textarea></div>
+    </div>
+    <div class="modal-f">
+      ${edit?`<button class="btn danger" data-del-event="${e.id}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Cancelar evento</button>`:''}
+      <button class="btn ghost" data-close>Cerrar</button>
+      <button class="btn gold" data-save-event="${edit?e.id:''}">${ic('M5 13l4 4L19 7')} ${edit?'Guardar':'Convocar'}</button>
+    </div></div>`,'form');
+  $mroot.querySelector('#eType').addEventListener('click',ev=>{const o=ev.target.closest('[data-type]');if(!o)return;$mroot.querySelectorAll('#eType .opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
+}
+async function saveEvent(id){
+  const title=($mroot.querySelector('#eTitle').value||'').trim(); if(!title){ toast('Falta el título'); return; }
+  const row={ type:$mroot.querySelector('#eType .opt.sel')?.dataset.type||'Raid', title,
+    date:$mroot.querySelector('#eDate').value||todayISO(), time:$mroot.querySelector('#eTime').value||'21:00',
+    size:+$mroot.querySelector('#eSize').value||null, dkp:Math.max(0,+$mroot.querySelector('#eDkp').value||0),
+    notes:($mroot.querySelector('#eNotes').value||'').trim() };
+  let error;
+  if(id){ ({error}=await sb.from('events').update(row).eq('id',id)); }
+  else { ({error}=await sb.from('events').insert({...row,settled:false})); }
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('events'); toast(id?'Convocatoria actualizada':'Convocatoria publicada');
+}
+async function delEvent(id){
+  if(!confirm('¿Cancelar este evento?')) return;
+  const { error } = await sb.from('events').delete().eq('id',id);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('events'); toast('Evento cancelado');
+}
+
+const STAT=[['conf','Voy'],['susp','Suplente'],['tent','Tal vez'],['aus','No voy']];
+function eventDetailModal(id){
+  const e=state.events.find(x=>x.id===id); if(!e){ closeModal(); return; }
+  const c=signCounts(e);
+  const list=[...state.profiles].sort((a,b)=>(a.display_name||'').localeCompare(b.display_name||''));
+  const rows=list.map(p=>{
+    const st=statusOf(e.id,p.id); const editable = p.id===ME.id || IS_ADMIN;
+    return `<div class="signup-row">
+      <div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:12px">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
+      <div class="grow"><div class="name" style="font-size:14px">${esc(p.display_name)}${p.id===ME.id?' <span class="muted">· tú</span>':''}</div>
+        <div class="sub-line">${p.role?`<span class="chip ${roleClass(p.role)}" style="padding:1px 7px"><span class="dot"></span>${esc(p.role)}</span>`:''}
+          <span class="muted" style="font-size:11.5px">${esc(p.char_class||'')}${p.spec?' · '+esc(p.spec):''}</span></div></div>
+      <div class="react" data-eid="${e.id}" data-uid="${p.id}">
+        ${STAT.map(([k,lbl])=>`<button data-set="${k}" class="${st===k?'on-'+k:''}" ${editable?'':'disabled'}>${lbl}</button>`).join('')}
+      </div></div>`;
+  }).join('');
+  openModal(`<div class="modal wide"><div class="modal-h">
+      <div><div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700">${esc(e.type)} · ${fmtDate(e.date)} · ${esc(e.time)}h ${e.settled?'· <span style="color:var(--moss)">liquidado</span>':''}</div>
+        <h3 style="margin-top:3px">${esc(e.title)}</h3></div>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="tally">${tallyChips(c)}<div class="t muted" style="margin-left:auto">Confirmados <b class="mono" style="color:var(--moss)">${c._total}</b>${e.size?` / ${e.size}`:''}</div></div>
+      ${e.notes?`<div class="note" style="margin-bottom:14px">${esc(e.notes)}</div>`:''}
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600;margin-bottom:6px">Inscripciones ${IS_ADMIN?'— tú puedes marcar a cualquiera':'— marca tu asistencia'}</div>
+      ${rows||'<div class="empty muted">Aún no hay guerreros.</div>'}
+    </div>
+    <div class="modal-f">
+      ${IS_ADMIN?`<button class="btn ghost" data-edit-event="${e.id}">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')} Editar</button>
+      <button class="btn gold" data-settle="${e.id}" ${e.settled?'disabled style="opacity:.5"':''}>${ic('M5 13l4 4L19 7')} ${e.settled?'DKP repartido':`Repartir ${e.dkp} DKP a confirmados`}</button>`
+      :`<button class="btn ghost" data-close>Cerrar</button>`}
+    </div></div>`,'eventDetail');
+  MODAL.eventId=id;
+  $mroot.querySelectorAll('.react').forEach(r=>r.addEventListener('click',async ev=>{
+    const btn=ev.target.closest('[data-set]'); if(!btn||btn.disabled) return;
+    const eid=r.dataset.eid, uid=r.dataset.uid, val=btn.dataset.set;
+    const cur=statusOf(eid,uid);
+    if(cur===val){ await sb.from('signups').delete().eq('event_id',eid).eq('user_id',uid); }
+    else { await sb.from('signups').upsert({event_id:eid,user_id:uid,status:val},{onConflict:'event_id,user_id'}); }
+    await refetch('signups');
+  }));
+}
+async function settleEvent(id){
+  const e=state.events.find(x=>x.id===id); if(!e||e.settled) return;
+  const attendees=signupsFor(id).filter(s=>s.status==='conf').map(s=>s.user_id);
+  if(!attendees.length){ toast('No hay confirmados'); return; }
+  if(!confirm(`¿Repartir ${e.dkp} DKP a ${attendees.length} confirmado(s)?`)) return;
+  const rows=attendees.map(uid=>({user_id:uid,amount:e.dkp,reason:`Asistencia · ${e.title}`,type:'award',date:e.date}));
+  const { error } = await sb.from('dkp_log').insert(rows);
+  if(error){ toast(error.message,true); return; }
+  await sb.from('events').update({settled:true}).eq('id',id);
+  await Promise.all([refetch('dkp_log'),refetch('events')]);
+  eventDetailModal(id); toast(`${e.dkp} DKP a ${attendees.length} guerreros`);
+}
+
+function awardModal(){
+  openModal(`<div class="modal"><div class="modal-h"><h3>Otorgar DKP</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Guerreros</label>
+        <div style="max-height:200px;overflow-y:auto;border:1px solid var(--line-2);border-radius:8px;padding:6px">
+        ${state.profiles.length? state.profiles.map(p=>`<label style="display:flex;align-items:center;gap:9px;padding:6px 8px;cursor:pointer;border-radius:6px">
+          <input type="checkbox" class="awMem" value="${p.id}" style="width:16px;height:16px;accent-color:var(--gold)">
+          <span class="name" style="font-size:14px">${esc(p.display_name)}</span>
+          ${p.role?`<span class="chip ${roleClass(p.role)}" style="margin-left:auto;padding:1px 7px"><span class="dot"></span>${esc(p.role)}</span>`:''}</label>`).join('') : '<div class="muted" style="padding:8px">No hay miembros.</div>'}
+        </div><button class="btn sm ghost" id="awAll" type="button" style="margin-top:8px">Seleccionar todos</button></div>
+      <div class="field-row"><div class="field"><label>Puntos (+)</label><input id="awAmt" type="number" min="1" value="${state.settings.dkp_default||10}"></div>
+        <div class="field"><label>Fecha</label><input id="awDate" type="date" value="${todayISO()}"></div></div>
+      <div class="field"><label>Motivo</label><input id="awReason" value="Ajuste manual" placeholder="p.ej. Asistencia, puntualidad…"></div>
+    </div>
+    <div class="modal-f"><button class="btn ghost" data-close>Cancelar</button><button class="btn gold" data-do-award>${ic('M12 5v14M5 12h14')} Otorgar</button></div></div>`,'form');
+  $mroot.querySelector('#awAll').addEventListener('click',()=>$mroot.querySelectorAll('.awMem').forEach(c=>c.checked=true));
+}
+async function doAward(){
+  const ids=[...$mroot.querySelectorAll('.awMem:checked')].map(c=>c.value); if(!ids.length){ toast('Elige alguien'); return; }
+  const amt=+$mroot.querySelector('#awAmt').value||0; if(amt<=0){ toast('Indica los puntos'); return; }
+  const reason=($mroot.querySelector('#awReason').value||'Ajuste manual').trim();
+  const date=$mroot.querySelector('#awDate').value||todayISO();
+  const rows=ids.map(uid=>({user_id:uid,amount:amt,reason,type:'award',date}));
+  const { error } = await sb.from('dkp_log').insert(rows); if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('dkp_log'); toast(`+${amt} DKP a ${ids.length} guerrero(s)`);
+}
+function spendModal(){
+  openModal(`<div class="modal"><div class="modal-h"><h3>Gastar DKP en botín</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Guerrero</label><select id="spMem">${state.profiles.map(p=>`<option value="${p.id}">${esc(p.display_name)} · ${balance(p.id)} DKP</option>`).join('')}</select></div>
+      <div class="field-row"><div class="field"><label>Coste (−)</label><input id="spAmt" type="number" min="1" value="25"></div>
+        <div class="field"><label>Fecha</label><input id="spDate" type="date" value="${todayISO()}"></div></div>
+      <div class="field"><label>Objeto / motivo</label><input id="spReason" placeholder="p.ej. Arco del Lobo Invernal"></div>
+    </div>
+    <div class="modal-f"><button class="btn ghost" data-close>Cancelar</button><button class="btn gold" data-do-spend>${ic('M5 13l4 4L19 7')} Registrar</button></div></div>`,'form');
+}
+async function doSpend(){
+  const uid=$mroot.querySelector('#spMem').value; const amt=+$mroot.querySelector('#spAmt').value||0; if(amt<=0){ toast('Indica el coste'); return; }
+  const reason=($mroot.querySelector('#spReason').value||'Botín').trim(); const date=$mroot.querySelector('#spDate').value||todayISO();
+  const { error } = await sb.from('dkp_log').insert({user_id:uid,amount:-amt,reason,type:'spend',date}); if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('dkp_log'); toast(`−${amt} DKP · ${reason}`);
+}
+
+/* --- Subastas: crear (admin) --- */
+function auctionModal(a){
+  const edit=!!a; a=a||{item:'',notes:'',min_bid:0,event_id:null};
+  const evs=upcoming();
+  openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar subasta':'Nueva subasta'}</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Objeto de botín</label><input id="aItem" value="${esc(a.item)}" placeholder="p.ej. Arco del Lobo Invernal"></div>
+      <div class="field"><label>Puja mínima (DKP)</label><input id="aMin" type="number" min="0" value="${a.min_bid||0}"></div>
+      <div class="field"><label>Raid asociado (opcional)</label><select id="aEvent"><option value="">— Ninguno —</option>${evs.map(e=>`<option value="${e.id}" ${a.event_id===e.id?'selected':''}>${esc(e.title)} · ${fmtDate(e.date)}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:0"><label>Notas</label><textarea id="aNotes" placeholder="Condiciones, prioridad de rol, etc.">${esc(a.notes||'')}</textarea></div>
+    </div>
+    <div class="modal-f">
+      ${edit?`<button class="btn danger" data-del-auction="${a.id}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Eliminar</button>`:''}
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn gold" data-save-auction="${edit?a.id:''}">${ic('M5 13l4 4L19 7')} ${edit?'Guardar':'Abrir subasta'}</button>
+    </div></div>`,'form');
+}
+async function saveAuction(id){
+  const item=($mroot.querySelector('#aItem').value||'').trim(); if(!item){ toast('Falta el objeto'); return; }
+  const row={ item, min_bid:Math.max(0,+$mroot.querySelector('#aMin').value||0), event_id:$mroot.querySelector('#aEvent').value||null, notes:($mroot.querySelector('#aNotes').value||'').trim() };
+  let error;
+  if(id){ ({error}=await sb.from('auctions').update(row).eq('id',id)); }
+  else { ({error}=await sb.from('auctions').insert({...row,status:'open'})); }
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('auctions'); toast(id?'Subasta actualizada':'Subasta abierta');
+}
+async function delAuction(id){
+  const a=auctionById(id); if(!a) return;
+  if(!confirm(`¿Eliminar la subasta de "${a.item}"? Se borran también sus pujas.`)) return;
+  const { error } = await sb.from('auctions').delete().eq('id',id);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await Promise.all([refetch('auctions'),refetch('bids')]); toast('Subasta eliminada');
+}
+
+/* --- Puja (jugador, secreta) --- */
+function bidModal(aid){
+  const a=auctionById(aid); if(!a) return; const bal=balance(ME.id); const cur=myBid(aid);
+  openModal(`<div class="modal"><div class="modal-h"><h3>Pujar en secreto</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-family:'Cinzel';font-size:18px;color:var(--gold-bright)">${esc(a.item)}</div>
+        <div class="muted" style="font-size:12.5px">Puja mínima: ${a.min_bid||0} · Tu DKP disponible: <b class="dkp-val">${bal}</b></div>
+      </div>
+      <div class="field" style="margin-bottom:6px"><label>Tu puja (DKP)</label><input id="bidAmt" type="number" min="${a.min_bid||0}" value="${cur!=null?cur:(a.min_bid||0)}"></div>
+      <div class="note">Nadie verá esta cantidad. Solo la dirección la conoce al adjudicar. Puedes cambiarla mientras la subasta siga abierta.</div>
+    </div>
+    <div class="modal-f">
+      ${cur!=null?`<button class="btn danger" data-retire-bid="${aid}">Retirar puja</button>`:''}
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn gold" data-place-bid="${aid}">${ic('M5 13l4 4L19 7')} ${cur!=null?'Actualizar':'Pujar'}</button>
+    </div></div>`,'form');
+}
+async function placeBid(aid){
+  const a=auctionById(aid); const bal=balance(ME.id);
+  const amt=+$mroot.querySelector('#bidAmt').value||0;
+  if(amt< (a.min_bid||0)){ toast(`La puja mínima es ${a.min_bid||0}`); return; }
+  if(amt<=0){ toast('Indica una puja'); return; }
+  if(amt>bal){ toast(`No puedes pujar más de tu DKP (${bal})`,true); return; }
+  const { error } = await sb.from('bids').upsert({auction_id:aid,user_id:ME.id,amount:amt},{onConflict:'auction_id,user_id'});
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('bids'); toast('Puja registrada en secreto');
+}
+async function retireBid(aid){
+  const { error } = await sb.from('bids').delete().eq('auction_id',aid).eq('user_id',ME.id);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('bids'); toast('Puja retirada');
+}
+
+/* --- Ver pujas y adjudicar (admin) --- */
+function auctionBidsModal(aid){
+  const a=auctionById(aid); if(!a){ closeModal(); return; }
+  const bids=bidsFor(aid);
+  const rows=bids.map((b,i)=>{ const p=profileById(b.user_id); return `<div class="signup-row">
+      <div class="medal ${i<3?'g'+(i+1):''}">${i+1}</div>
+      <div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:12px">${p&&p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p?p.display_name:'?')}</div>
+      <div class="grow"><div class="name" style="font-size:14px">${esc(p?p.display_name:'—')}</div>
+        <div class="sub-line"><span class="muted">DKP disponible: ${p?balance(p.id):'—'}</span></div></div>
+      <div style="display:flex;align-items:center;gap:10px"><div class="dkp-val" style="font-size:16px">${b.amount}</div>
+        ${a.status==='open'?`<button class="btn sm gold" data-adjudicate="${aid}:${b.user_id}">Adjudicar</button>`:(a.winner_id===b.user_id?'<span class="chip role-sanador">Ganador</span>':'')}</div>
+    </div>`; }).join('');
+  openModal(`<div class="modal wide"><div class="modal-h">
+      <div><div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700">Subasta ${a.status==='open'?'abierta':'adjudicada'}</div>
+        <h3 style="margin-top:3px">${esc(a.item)}</h3></div>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="note" style="margin-bottom:14px">Vista solo para la dirección. Al adjudicar, se descuenta la puja del ganador de su DKP y el objeto aparece en su cuenta.</div>
+      ${bids.length? rows : '<div class="empty muted">Nadie ha pujado todavía.</div>'}
+    </div>
+    <div class="modal-f">
+      ${a.status==='open'?`<button class="btn ghost" data-edit-auction="${aid}">Editar</button>`:''}
+      <button class="btn ghost" data-close>Cerrar</button>
+    </div></div>`,'auctionBids');
+  MODAL.eventId=aid;
+}
+async function adjudicate(aid,winnerId){
+  const a=auctionById(aid); if(!a||a.status!=='open') return;
+  const b=state.bids.find(x=>x.auction_id===aid && x.user_id===winnerId); if(!b) return;
+  const p=profileById(winnerId);
+  if(!confirm(`¿Adjudicar "${a.item}" a ${p?p.display_name:'este guerrero'} por ${b.amount} DKP?`)) return;
+  const { error } = await sb.from('dkp_log').insert({user_id:winnerId,amount:-b.amount,reason:`Botín · ${a.item}`,type:'spend',date:todayISO()});
+  if(error){ toast(error.message,true); return; }
+  await sb.from('auctions').update({status:'closed',winner_id:winnerId}).eq('id',aid);
+  await Promise.all([refetch('dkp_log'),refetch('auctions')]);
+  auctionBidsModal(aid); toast(`Adjudicado a ${p?p.display_name:''} · −${b.amount} DKP`);
+}
+
+async function saveSettings(patch,msg){
+  const { error } = await sb.from('settings').update(patch).eq('id',1);
+  if(error){ toast(error.message,true); return false; }
+  state.settings={...state.settings,...patch}; if(msg) toast(msg); return true;
+}
+async function saveIdentity(){
+  await saveSettings({ guild_name:($root.querySelector('#setName').value||'Walhalla').trim(), dkp_default:Math.max(0,+$root.querySelector('#setDkp').value||0) },'Identidad guardada');
+  render();
+}
+async function addTag(field){
+  const inp=$root.querySelector(`.tagAdd[data-field="${field}"]`); if(!inp) return; const v=(inp.value||'').trim(); if(!v) return;
+  const arr=[...(state.settings[field]||[])]; if(arr.includes(v)){ toast('Ya existe'); return; } arr.push(v);
+  if(await saveSettings({[field]:arr})) render();
+}
+async function delTag(field,i){ const arr=[...(state.settings[field]||[])]; arr.splice(i,1); if(await saveSettings({[field]:arr})) render(); }
+async function addClass(){
+  const name=(prompt('Nombre de la clase:')||'').trim(); if(!name) return;
+  const arr=[...(state.settings.classes||[])]; if(arr.some(c=>c.name===name)){ toast('Ya existe'); return; }
+  arr.push({name,specs:[]}); if(await saveSettings({classes:arr})){ render(); toast('Clase añadida'); }
+}
+async function delClass(i){ const arr=[...(state.settings.classes||[])]; if(!confirm(`¿Eliminar la clase "${arr[i].name}"?`))return; arr.splice(i,1); if(await saveSettings({classes:arr})) render(); }
+async function addSpec(ci){
+  const inp=$root.querySelector(`.specAdd[data-ci="${ci}"]`); if(!inp) return; const v=(inp.value||'').trim(); if(!v) return;
+  const arr=JSON.parse(JSON.stringify(state.settings.classes||[])); arr[ci].specs=arr[ci].specs||[];
+  if(arr[ci].specs.includes(v)){ toast('Ya existe'); return; } arr[ci].specs.push(v);
+  if(await saveSettings({classes:arr})) render();
+}
+async function delSpec(ci,si){ const arr=JSON.parse(JSON.stringify(state.settings.classes||[])); arr[ci].specs.splice(si,1); if(await saveSettings({classes:arr})) render(); }
+
+document.addEventListener('click',e=>{
+  const t=e.target;
+  const tab=t.closest('[data-tab]'); if(tab){ state.ui.view=tab.dataset.tab; render(); return; }
+  const cal=t.closest('[data-cal]'); if(cal){ let m=state.ui.calM+(+cal.dataset.cal),y=state.ui.calY; if(m<0){m=11;y--} if(m>11){m=0;y++} state.ui.calM=m; state.ui.calY=y; render(); return; }
+  const act=t.closest('[data-act]'); if(act){ handleAct(act.dataset.act); return; }
+  if(t.closest('[data-close]')){ closeModal(); return; }
+  if(t.closest('[data-edit-me]')){ memberModal(ME.id); return; }
+  const oe=t.closest('[data-open-event]'); if(oe){ eventDetailModal(oe.dataset.openEvent); return; }
+  const day=t.closest('[data-day]'); if(day && IS_ADMIN && !t.closest('[data-open-event]')){ eventModal({type:'Raid',title:'',date:day.dataset.day,time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''}); return; }
+  const em=t.closest('[data-edit-member]'); if(em){ memberModal(em.dataset.editMember); return; }
+  const ee=t.closest('[data-edit-event]'); if(ee){ eventModal(state.events.find(x=>x.id===ee.dataset.editEvent)); return; }
+  const sm=t.closest('[data-save-member]'); if(sm){ saveMember(sm.dataset.saveMember); return; }
+  const dm=t.closest('[data-del-member]'); if(dm){ delMember(dm.dataset.delMember); return; }
+  const sv=t.closest('[data-save-event]'); if(sv){ saveEvent(sv.dataset.saveEvent); return; }
+  const de=t.closest('[data-del-event]'); if(de){ delEvent(de.dataset.delEvent); return; }
+  const st=t.closest('[data-settle]'); if(st && !st.disabled){ settleEvent(st.dataset.settle); return; }
+  const da=t.closest('[data-do-award]'); if(da){ doAward(); return; }
+  const ds=t.closest('[data-do-spend]'); if(ds){ doSpend(); return; }
+  const at=t.closest('[data-add-tag]'); if(at){ addTag(at.dataset.addTag); return; }
+  const dt=t.closest('[data-del-tag]'); if(dt){ const [f,i]=dt.dataset.delTag.split(':'); delTag(f,+i); return; }
+  const acl=t.closest('[data-del-class]'); if(acl){ delClass(+acl.dataset.delClass); return; }
+  const ac=t.closest('[data-add-spec]'); if(ac){ addSpec(+ac.dataset.addSpec); return; }
+  const dsp=t.closest('[data-del-spec]'); if(dsp){ const [ci,si]=dsp.dataset.delSpec.split(':'); delSpec(+ci,+si); return; }
+  const sa=t.closest('[data-save-auction]'); if(sa){ saveAuction(sa.dataset.saveAuction); return; }
+  const dau=t.closest('[data-del-auction]'); if(dau){ delAuction(dau.dataset.delAuction); return; }
+  const ea=t.closest('[data-edit-auction]'); if(ea){ auctionModal(auctionById(ea.dataset.editAuction)); return; }
+  const vb=t.closest('[data-view-bids]'); if(vb){ auctionBidsModal(vb.dataset.viewBids); return; }
+  const bd=t.closest('[data-bid]'); if(bd){ bidModal(bd.dataset.bid); return; }
+  const pb=t.closest('[data-place-bid]'); if(pb){ placeBid(pb.dataset.placeBid); return; }
+  const rb=t.closest('[data-retire-bid]'); if(rb){ retireBid(rb.dataset.retireBid); return; }
+  const adj=t.closest('[data-adjudicate]'); if(adj){ const [aid,wid]=adj.dataset.adjudicate.split(':'); adjudicate(aid,wid); return; }
+});
+function handleAct(a){
+  if(a==='new-event') return eventModal();
+  if(a==='award') return awardModal();
+  if(a==='spend'){ if(!state.profiles.length) return toast('No hay miembros'); return spendModal(); }
+  if(a==='save-identity') return saveIdentity();
+  if(a==='add-class') return addClass();
+  if(a==='new-auction') return auctionModal();
+}
+document.addEventListener('input',e=>{
+  if(e.target.id==='rosterQ'){ state.ui.rosterSearch=e.target.value; const app=$root.querySelector('main'); app.innerHTML=viewRoster();
+    const inp=document.getElementById('rosterQ'); if(inp){ inp.focus(); const v=inp.value; inp.setSelectionRange(v.length,v.length); } }
+});
+document.addEventListener('change',e=>{ if(e.target.id==='rosterRole'){ state.ui.rosterRole=e.target.value; render(); } });
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeModal();
+  if(e.key==='Enter'){ if(e.target.classList.contains('tagAdd')) addTag(e.target.dataset.field);
+    if(e.target.classList.contains('specAdd')) addSpec(+e.target.dataset.ci); }
+});
+
+boot();
+</script>
+</body>
+</html>
