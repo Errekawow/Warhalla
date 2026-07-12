@@ -826,7 +826,8 @@ async function delMember(id){
 }
 
 function eventModal(e){
-  const edit=!!e; e=e||{type:'Raid',title:'',date:todayISO(),time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''};
+  const edit = !!(e && e.id);   // solo es edición si existe de verdad
+  e = e || {type:'Raid',title:'',date:todayISO(),time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''};
   openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar convocatoria':'Convocar evento'}</h3>
       <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
@@ -967,7 +968,8 @@ async function doSpend(){
 
 /* --- Subastas: crear (admin) --- */
 function auctionModal(a){
-  const edit=!!a; a=a||{item:'',notes:'',min_bid:0,event_id:null};
+  const edit = !!(a && a.id);
+  a = a || {item:'',notes:'',min_bid:0,event_id:null};
   const evs=upcoming();
   openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar subasta':'Nueva subasta'}</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
