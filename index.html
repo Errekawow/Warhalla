@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- Tooltips de objetos (base de datos de Ascension). Si no cargara, los
+     enlaces siguen funcionando: llevan a la ficha del objeto. -->
+<script>var aowow_tooltips = { "colorlinks": true, "iconizelinks": true, "renamelinks": false };</script>
+<script src="https://db.ascension.gg/static/widgets/power.js" async></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -48,6 +52,11 @@
   .whoami{margin-left:auto;display:flex;align-items:center;gap:10px}
   .whoami .me{display:flex;align-items:center;gap:9px;background:var(--stone-2);border:1px solid var(--line);border-radius:22px;padding:5px 6px 5px 12px}
   .whoami .me .n{font-size:13px;font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .seg-wrap{flex-wrap:wrap}
+  .seg-wrap .opt{flex:1 1 30%;min-width:90px}
+  .badge-rl{font-size:9.5px;letter-spacing:.14em;font-weight:700;color:#a8d0f0;background:rgba(90,150,210,.18);border:1px solid rgba(90,150,210,.5);padding:2px 7px;border-radius:20px;text-transform:uppercase}
+  .badge-ml{font-size:9.5px;letter-spacing:.14em;font-weight:700;color:#f0c8a0;background:rgba(210,150,90,.18);border:1px solid rgba(210,150,90,.5);padding:2px 7px;border-radius:20px;text-transform:uppercase}
+  .badge-officer{font-size:9.5px;letter-spacing:.14em;font-weight:700;color:#d3c3ef;background:rgba(169,143,208,.18);border:1px solid rgba(169,143,208,.5);padding:2px 7px;border-radius:20px;text-transform:uppercase}
   .badge-admin{font-size:9.5px;letter-spacing:.14em;font-weight:700;color:#1a140a;background:linear-gradient(180deg,var(--gold-bright),var(--gold));padding:2px 7px;border-radius:20px;text-transform:uppercase}
 
   nav.tabs{max-width:1180px;margin:0 auto;padding:0 18px 12px;display:flex; gap:4px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none}
@@ -109,6 +118,31 @@
   .role-support{color:#d3c3ef;border-color:rgba(169,143,208,.4);background:rgba(169,143,208,.12)} .role-support .dot{background:var(--supp)}
   .rank-chip{font-family:'Cinzel',serif;letter-spacing:.03em;color:var(--gold);border-color:var(--gold-dim);background:rgba(201,162,78,.08)}
   .dkp-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gold-bright)}
+  a.item-link{text-decoration:none}
+  a.item-link:hover{text-decoration:underline}
+  /* Colores de calidad, como en el juego */
+  .q0{color:#9d9d9d} .q1{color:#ffffff} .q2{color:#1eff00} .q3{color:#0070dd} .q4{color:#a335ee} .q5{color:#ff8000}
+  .qb0{border-color:#9d9d9d!important} .qb1{border-color:#6a6a6a!important} .qb2{border-color:#1eff00!important}
+  .qb3{border-color:#0070dd!important} .qb4{border-color:#a335ee!important} .qb5{border-color:#ff8000!important}
+  /* Icono de objeto */
+  .ic-item{width:100%;height:100%;object-fit:cover;display:block}
+  .ic-box{width:44px;height:44px;flex:0 0 44px;border-radius:6px;border:2px solid var(--line-2);background:#0a0d12;overflow:hidden;display:grid;place-items:center;position:relative}
+  .ic-box.sm{width:30px;height:30px;flex-basis:30px;border-width:1px;border-radius:5px}
+  .ic-box .ph{font-size:15px;color:var(--muted-2)}
+  /* Muñeco de equipo */
+  .doll{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:700px){.doll{grid-template-columns:1fr;gap:10px}}
+  .doll-col{display:flex;flex-direction:column;gap:8px}
+  .slot{display:flex;align-items:center;gap:10px;padding:6px;border:1px solid var(--line);border-radius:9px;background:var(--stone-2);cursor:pointer;transition:.12s;min-height:58px}
+  .slot:hover{border-color:var(--gold-dim);background:var(--stone-3)}
+  .slot.ro{cursor:default} .slot.ro:hover{border-color:var(--line);background:var(--stone-2)}
+  .slot .txt{flex:1;min-width:0}
+  .slot .sname{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .slot .iname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .slot .vacio{font-size:13px;color:var(--muted-2);font-style:italic}
+  .doll-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .doll-weapons .slot{flex:1;min-width:190px}
+  .gear-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
   .pos{color:var(--moss)} .neg{color:#e79a92}
   .lock{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
   .lock svg{width:12px;height:12px}
@@ -234,7 +268,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let sb = null;
 let ME = null;
-let IS_ADMIN = false;
+let IS_ADMIN  = false;   // Líder: puede todo
+let CAN_RAID  = false;   // Raid Leader (u Oficial/Líder): calendario, asistencia, roster
+let CAN_LOOT  = false;   // Master Loot (u Oficial/Líder): subastas, adjudicar, repartir DKP
 let ENTERING = false;   // evita que enter() se ejecute dos veces a la vez
 let CHANNEL = null;     // canal de tiempo real (uno solo)
 const state = {
@@ -264,9 +300,140 @@ function balance(uid){ return state.dkpLog.filter(l=>l.user_id===uid).reduce((s,
 function signupsFor(eid){ return state.signups.filter(s=>s.event_id===eid); }
 function statusOf(eid,uid){ const s=state.signups.find(x=>x.event_id===eid&&x.user_id===uid); return s?s.status:''; }
 function upcoming(){ const t=todayISO(); return [...state.events].filter(e=>e.date>=t).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)); }
+/* ---------- RAZAS ----------
+   Los iconos de raza de WoW son estándar, así que se generan solos:
+   no hay que pegar ninguna URL.                                   */
+const RAZAS = [
+  ['Humano','human','Alianza'],       ['Enano','dwarf','Alianza'],
+  ['Elfo de la noche','nightelf','Alianza'], ['Gnomo','gnome','Alianza'],
+  ['Draenei','draenei','Alianza'],
+  ['Orco','orc','Horda'],             ['No-muerto','undead','Horda'],
+  ['Tauren','tauren','Horda'],        ['Trol','troll','Horda'],
+  ['Elfo de sangre','bloodelf','Horda']
+];
+function razaObj(n){ const r=RAZAS.find(x=>x[0]===n); return r?{name:r[0],slug:r[1],faccion:r[2]}:null; }
+function razaNames(){ return RAZAS.map(r=>r[0]); }
+// El icono correcto en WoW es achievement_character_<raza>_<sexo>
+function razaIcon(raza,genero){
+  const r=razaObj(raza); if(!r) return null;
+  return `achievement_character_${r.slug}_${genero==='F'?'female':'male'}`;
+}
+function razaIconHTML(raza,genero,tam){
+  const ico=razaIcon(raza,genero); if(!ico) return '';
+  const t=tam||16;
+  return imgChain(ico,`width:${t}px;height:${t}px;border-radius:4px;vertical-align:-3px;margin-right:5px`);
+}
+function razaHTML(p){
+  if(!p.race) return '';
+  return `<span class="chip">${razaIconHTML(p.race,p.gender)}${esc(p.race)}</span>`;
+}
+// Distintivo del cargo (el más alto que tenga)
+function cargoDe(p){
+  if(!p) return null;
+  if(p.is_admin)    return 'Líder';
+  if(p.is_officer)  return 'Oficial';
+  if(p.is_raidlead) return 'Raid Leader';
+  if(p.is_looter)   return 'Master Loot';
+  return null;
+}
+function badgeCargo(p,ml){
+  const c=cargoDe(p); if(!c) return '';
+  const cls = c==='Líder' ? 'badge-admin' : (c==='Oficial' ? 'badge-officer' : (c==='Raid Leader' ? 'badge-rl' : 'badge-ml'));
+  return `<span class="${cls}"${ml?' style="margin-left:4px"':''}>${c}</span>`;
+}
 function classNames(){ return (state.settings.classes||[]).map(c=>c.name); }
-function specsOf(cls){ const c=(state.settings.classes||[]).find(x=>x.name===cls); return c?(c.specs||[]):[]; }
+function classObj(cls){ return (state.settings.classes||[]).find(x=>x.name===cls) || null; }
+// Las specs pueden ser texto ("Fuego") u objeto ({name,icon}); admitimos ambas
+function specsOf(cls){ const c=classObj(cls); if(!c) return [];
+  return (c.specs||[]).map(sp=> typeof sp==='string' ? sp : sp.name); }
+function specObj(cls,spec){ const c=classObj(cls); if(!c) return null;
+  return (c.specs||[]).map(sp=> typeof sp==='string'?{name:sp,icon:null}:sp).find(x=>x.name===spec) || null; }
+function classIcon(cls){ const c=classObj(cls); return c && c.icon ? c.icon : null; }
+function classColor(cls){ const c=classObj(cls); return c && c.color ? c.color : null; }
+// Nombre de la clase con su color, como en el juego
+function classNameHTML(cls,spec){
+  if(!cls) return '<span class="muted">Sin clase</span>';
+  const col=classColor(cls);
+  const txt=esc(cls)+(spec?' · '+esc(spec):'');
+  return col ? `<span style="color:${esc(col)};font-weight:600">${txt}</span>` : txt;
+}
+function specIcon(cls,spec){ const s=specObj(cls,spec); return s && s.icon ? s.icon : null; }
+// Icono pequeño al lado del nombre de la clase (spec si tiene, si no la clase)
+function classIconHTML(cls,spec){
+  const ico = (spec && specIcon(cls,spec)) || classIcon(cls);
+  return imgChain(ico,'width:16px;height:16px;border-radius:4px;vertical-align:-3px;margin-right:5px');
+}
 function auctionById(id){ return state.auctions.find(a=>a.id===id); }
+// Acepta un número suelto o un enlace de db.ascension.gg y saca el ID del objeto
+function parseItemId(txt){
+  const t=String(txt||'').trim(); if(!t) return null;
+  const m = t.match(/item=(\d+)/i) || t.match(/^(\d+)$/);
+  return m ? parseInt(m[1],10) : null;
+}
+function itemUrl(itemId){ return `https://db.ascension.gg/?item=${itemId}`; }
+
+/* ---------- ICONOS ----------
+   Acepta tres formas, de más cómoda a más segura:
+   1) Nombre del icono  → inv_sword_39
+   2) URL completa      → https://.../inv_sword_39.jpg
+   3) Nada              → se pinta un hueco
+   Si el icono no carga desde Ascension, se reintenta en el CDN de Wowhead.
+------------------------------------------------------------------- */
+const ICON_ASC = n => `https://db.ascension.gg/static/images/wow/icons/large/${n}.jpg`;
+const ICON_ZAM = n => `https://wow.zamimg.com/images/wow/icons/large/${n}.jpg`;
+const ICON_ZAM_M = n => `https://wow.zamimg.com/images/wow/icons/medium/${n}.jpg`;
+
+// Devuelve la lista de sitios donde buscar un icono, en orden de preferencia.
+function iconCands(icon){
+  const t=String(icon||'').trim(); if(!t) return [];
+  if(/^https?:\/\//i.test(t)) return [t];                       // URL puesta a mano: se respeta
+  const n=t.toLowerCase().replace(/\.(jpg|png)$/i,'');
+  return [ ICON_ZAM(n), ICON_ASC(n), ICON_ZAM_M(n) ];
+}
+function iconSrc(icon){ const c=iconCands(icon); return c.length?c[0]:null; }
+
+// Si una fuente falla, la imagen salta sola a la siguiente. Si se acaban, se oculta.
+window.__nextIcon = function(el){
+  const c=(el.dataset.c||'').split('|').filter(Boolean);
+  let i=(+el.dataset.i||0)+1;
+  if(i<c.length){ el.dataset.i=i; el.src=c[i]; }
+  else { el.onerror=null; el.style.display='none'; const ph=el.parentElement&&el.parentElement.querySelector('.ph'); if(ph) ph.style.display='block'; }
+};
+// <img> con cadena de respaldo incorporada
+function imgChain(icon, style, cls){
+  const c=iconCands(icon); if(!c.length) return '';
+  return `<img ${cls?`class="${cls}"`:''} src="${esc(c[0])}" data-c="${esc(c.join('|'))}" data-i="0" onerror="__nextIcon(this)" alt="" ${style?`style="${style}"`:''}>`;
+}
+// Caja de icono con borde de calidad
+function iconBox(icon,quality,sm){
+  const q=(quality==null||quality==='')?null:+quality;
+  const cls=`ic-box${sm?' sm':''}${q!=null?` qb${q}`:''}`;
+  const img=imgChain(icon,'','ic-item');
+  if(!img) return `<div class="${cls}"><span class="ph">◇</span></div>`;
+  return `<div class="${cls}"><span class="ph" style="display:none;position:absolute">◇</span>${img}</div>`;
+}
+const QUALITIES=[[1,'Común'],[2,'Poco común'],[3,'Raro'],[4,'Épico'],[5,'Legendario']];
+function qClass(q){ return (q==null||q==='')?'':`q${+q}`; }
+// Nombre del objeto: si tiene ID, es un enlace con tooltip a la BD de Ascension
+// En el historial de DKP, si el gasto viene de una subasta, la enlazamos
+function botinHTML(l){
+  const txt=String(l.reason||'Objeto');
+  const nombre=txt.replace(/^Botín · /,'');
+  const a=state.auctions.find(x=>x.item===nombre && x.item_id);
+  return a ? `<a class="item-link" href="${itemUrl(a.item_id)}" target="_blank" rel="noopener item=${a.item_id}">${esc(txt)}</a>` : esc(txt);
+}
+function itemHTML(a){
+  const c=qClass(a.item_quality);
+  if(!a.item_id) return `<span class="${c}">${esc(a.item)}</span>`;
+  return `<a class="item-link ${c}" href="${itemUrl(a.item_id)}" target="_blank" rel="noopener item=${a.item_id}">${esc(a.item)}</a>`;
+}
+// Pide al script de tooltips que revise los enlaces nuevos tras repintar
+function refreshTooltips(){
+  try{
+    if(window.$WowheadPower && typeof window.$WowheadPower.refreshLinks==='function') window.$WowheadPower.refreshLinks();
+    else if(typeof window.g_initTooltips==='function') window.g_initTooltips();
+  }catch(e){ /* si no hay tooltips, los enlaces siguen funcionando */ }
+}
 function myBid(aid){ const b=state.bids.find(x=>x.auction_id===aid && x.user_id===ME.id); return b?b.amount:null; }
 function bidsFor(aid){ return state.bids.filter(b=>b.auction_id===aid).sort((a,b)=>b.amount-a.amount); }
 function openAuctions(){ return state.auctions.filter(a=>a.status==='open').sort((a,b)=>(b.created_at||'').localeCompare(a.created_at||'')); }
@@ -290,7 +457,7 @@ async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
   sb.auth.onAuthStateChange((_e, s)=>{
     if(s){ if(!ME && !ENTERING) enter(s); }
-    else { ME=null; IS_ADMIN=false; CHANNEL=null; renderLogin(); }
+    else { ME=null; IS_ADMIN=false; CAN_RAID=false; CAN_LOOT=false; CHANNEL=null; renderLogin(); }
   });
   if(session) enter(session); else renderLogin();
 }
@@ -314,7 +481,10 @@ async function ensureProfile(user){
   if(!data){ await sb.from('profiles').insert({ id:user.id, display_name:name, avatar_url:avatar }); }
   else if(!data.avatar_url && avatar){ await sb.from('profiles').update({ avatar_url:avatar }).eq('id', user.id); }
   const { data:me } = await sb.from('profiles').select('*').eq('id', user.id).single();
-  ME = me; IS_ADMIN = !!me.is_admin;
+  ME = me;
+  IS_ADMIN = !!me.is_admin;
+  CAN_RAID = !!(me.is_admin || me.is_officer || me.is_raidlead);
+  CAN_LOOT = !!(me.is_admin || me.is_officer || me.is_looter);
 }
 async function loadAll(){
   const [set, profs, evs, sus, dkp, auc, bid] = await Promise.all([
@@ -404,6 +574,7 @@ function tabsFor(){
     {id:'raids',label:'Calendario',icon:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
     {id:'subastas',label:'Subastas',icon:'M14 13l-7 7M3 21h8M13 6l5 5M9.5 6.5l8 8 3-3-8-8zM6 10l5 5'},
   ];
+  base.push({id:'equipo',label:'Mi Equipo',icon:'M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z'});
   base.push({id:'cuenta',label:'Mi Cuenta',icon:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'});
   if(IS_ADMIN){
     base.push({id:'dkp',label:'DKP',icon:'M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z'});
@@ -424,7 +595,7 @@ function render(){
         <div class="me">
           <div class="avatar" style="width:26px;height:26px;flex-basis:26px;font-size:11px">${av}</div>
           <span class="n">${esc(ME.display_name)}</span>
-          ${IS_ADMIN?'<span class="badge-admin">Admin</span>':''}
+          ${badgeCargo(ME)}
         </div>
         <button class="icon-btn" id="logoutBtn" title="Salir">${ic('M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9')}</button>
       </div>
@@ -433,6 +604,7 @@ function render(){
   </header>
   <main>${bodyFor()}</main>`;
   document.getElementById('logoutBtn').onclick=signOut;
+  refreshTooltips();
 }
 function bodyFor(){
   const v=state.ui.view;
@@ -440,6 +612,7 @@ function bodyFor(){
   if(v==='roster') return viewRoster();
   if(v==='raids') return viewRaids();
   if(v==='subastas') return viewSubastas();
+  if(v==='equipo') return viewEquipo(state.ui.gearUser || ME.id);
   if(v==='cuenta'||v==='midkp') return viewMiCuenta();
   if(v==='dkp' && IS_ADMIN) return viewDKP();
   if(v==='ajustes' && IS_ADMIN) return viewAjustes();
@@ -456,7 +629,8 @@ function viewPanel(){
       <div style="flex:1;min-width:0">
         <div style="font-family:'Cinzel';font-size:19px;color:var(--gold-bright)">${esc(ME.display_name)}</div>
         <div class="sub-line">
-          <span class="chip">${esc(ME.char_class||'Sin clase')}${ME.spec?' · '+esc(ME.spec):''}</span>
+          ${razaHTML(ME)}
+          <span class="chip">${classIconHTML(ME.char_class,ME.spec)}${classNameHTML(ME.char_class,ME.spec)}</span>
           ${ME.role?`<span class="chip ${roleClass(ME.role)}"><span class="dot"></span>${esc(ME.role)}</span>`:''}
           ${ME.rank?`<span class="chip rank-chip">${esc(ME.rank)}</span>`:''}
         </div>
@@ -470,7 +644,7 @@ function viewPanel(){
     <div class="grid g-dash">
       <div class="panel">
         <div class="panel-h"><h3><span class="rune">ᛥ</span> Próxima convocatoria</h3>
-          ${IS_ADMIN?`<button class="btn sm gold" data-act="new-event">${ic('M12 5v14M5 12h14')} Convocar</button>`:''}</div>
+          ${CAN_RAID?`<button class="btn sm gold" data-act="new-event">${ic('M12 5v14M5 12h14')} Convocar</button>`:''}</div>
         <div class="panel-b">${ next ? nextEventBlock(next) : `<div class="empty"><div class="rune">ᛟ</div><p>No hay nada en el horizonte.</p></div>`}</div>
       </div>
       <div class="panel">
@@ -556,16 +730,19 @@ function viewRoster(){
 }
 function rosterRow(p){
   const mine = p.id===ME.id;
-  const canEdit = mine || IS_ADMIN;
+  const canEdit = mine || CAN_RAID;   // el Raid Leader gestiona el roster
   const showDkp = mine || IS_ADMIN;
   return `<div class="row ${mine?'me-row':''}">
     <div class="avatar">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
-    <div class="grow"><div class="name">${esc(p.display_name)} ${p.is_admin?'<span class="badge-admin" style="margin-left:4px">Admin</span>':''}</div>
+    <div class="grow"><div class="name">${esc(p.display_name)} ${badgeCargo(p,true)}</div>
       <div class="sub-line">
-        <span class="chip">${esc(p.char_class||'—')}${p.spec?' · '+esc(p.spec):''}</span>
+        ${razaHTML(p)}
+        <span class="chip">${classIconHTML(p.char_class,p.spec)}${classNameHTML(p.char_class,p.spec)}</span>
         ${p.role?`<span class="chip ${roleClass(p.role)}"><span class="dot"></span>${esc(p.role)}</span>`:''}
         ${p.rank?`<span class="chip rank-chip">${esc(p.rank)}</span>`:''}
+        ${gearCount(p)?`<span class="chip">⚔ ${gearCount(p)} piezas</span>`:''}
       </div></div>
+    <button class="icon-btn" data-see-gear="${p.id}" title="Ver su equipo">${ic('M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z')}</button>
     ${showDkp?`<div style="text-align:right;margin-right:4px"><div class="dkp-val">${balance(p.id)}</div><div class="muted" style="font-size:10.5px;letter-spacing:.08em">DKP${mine&&!IS_ADMIN?' · tuyo':''}</div></div>`
       :`<div class="lock" style="margin-right:6px">${ic('M5 11h14v10H5zM8 11V7a4 4 0 018 0v4')}</div>`}
     ${canEdit?`<button class="icon-btn" data-edit-member="${p.id}" title="${mine?'Editar mi ficha':'Editar'}">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')}</button>`:''}
@@ -592,7 +769,7 @@ function viewRaids(){
   for(let d=1;d<=days;d++){
     const iso=`${key}-${String(d).padStart(2,'0')}`;
     const evs=(evByDay[d]||[]).sort((a,b)=>a.time.localeCompare(b.time));
-    cells+=`<div class="cal-cell ${iso===tISO?'today':''}" ${IS_ADMIN?`data-day="${iso}"`:''}>
+    cells+=`<div class="cal-cell ${iso===tISO?'today':''}" ${CAN_RAID?`data-day="${iso}"`:''}>
       <div class="d">${d}</div>
       ${evs.map(e=>`<div class="ev-pill ${e.type.toLowerCase()==='raid'?'raid':'evento'}" data-open-event="${e.id}" title="${esc(e.title)}">${esc(e.time)} ${esc(e.title)}</div>`).join('')}</div>`;
   }
@@ -601,7 +778,7 @@ function viewRaids(){
   return `<div class="view">
     <div class="eyebrow">Convocatorias</div>
     <div class="page-head"><h2>Calendario de asaltos</h2>
-      ${IS_ADMIN?`<button class="btn gold" data-act="new-event">${ic('M12 5v14M5 12h14')} Convocar evento</button>`:''}</div>
+      ${CAN_RAID?`<button class="btn gold" data-act="new-event">${ic('M12 5v14M5 12h14')} Convocar evento</button>`:''}</div>
     <div class="panel"><div class="panel-b">
       <div class="cal-head">
         <button class="icon-btn" data-cal="-1">${ic('M15 18l-6-6 6-6')}</button>
@@ -659,7 +836,7 @@ function viewMiCuenta(){
       <div class="panel"><div class="panel-h"><h3><span class="rune">ᛜ</span> Mis objetos obtenidos</h3><span class="muted" style="font-size:12px">${items.length}</span></div>
         <div class="panel-b" style="padding:6px 8px">${items.length? `<div class="rows">${items.map(l=>`
           <div class="row"><div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:13px">⚔</div>
-            <div class="grow"><div class="name" style="font-size:14px">${esc(l.reason||'Objeto')}</div>
+            <div class="grow"><div class="name" style="font-size:14px">${botinHTML(l)}</div>
               <div class="sub-line"><span class="mono">${fmtDate(l.date)}</span></div></div>
             <div class="dkp-val neg">${l.amount}</div></div>`).join('')}</div>`
           : `<div class="empty" style="padding:26px"><div class="rune">ᛜ</div><p>Aún no has ganado botín.</p></div>`}</div></div>
@@ -682,7 +859,7 @@ function viewSubastas(){
   return `<div class="view">
     <div class="eyebrow">Botín · subasta a sobre cerrado</div>
     <div class="page-head"><h2>Subastas de botín</h2>
-      ${IS_ADMIN?`<button class="btn gold" data-act="new-auction">${ic('M12 5v14M5 12h14')} Nueva subasta</button>`:''}</div>
+      ${CAN_LOOT?`<button class="btn gold" data-act="new-auction">${ic('M12 5v14M5 12h14')} Nueva subasta</button>`:''}</div>
     <div class="note" style="margin-bottom:16px">Tu puja es <b>secreta</b>: nadie más ve cuánto ofreces, ni siquiera tu DKP. Gana la puja más alta cuando la dirección adjudique el objeto.</div>
     <div class="panel"><div class="panel-h"><h3><span class="rune">ᚷ</span> Abiertas</h3></div>
       <div class="panel-b" style="padding:6px 8px">
@@ -698,21 +875,23 @@ function auctionRow(a){
   const winner=a.winner_id?profileById(a.winner_id):null;
   let right;
   if(open){
-    if(IS_ADMIN){ right=`<button class="btn sm gold" data-view-bids="${a.id}">${ic('M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z')} ${bidsFor(a.id).length} puja(s)</button>`; }
-    else { right=`<button class="btn sm ${mine!=null?'':'gold'}" data-bid="${a.id}">${ic('M14 13l-7 7M13 6l5 5M9.5 6.5l8 8 3-3-8-8z')} ${mine!=null?'Cambiar puja':'Pujar'}</button>`; }
+    // Todos (incluido el admin) pueden pujar. El admin, además, ve las pujas.
+    const btnPujar = `<button class="btn sm ${mine!=null?'':'gold'}" data-bid="${a.id}">${ic('M14 13l-7 7M13 6l5 5M9.5 6.5l8 8 3-3-8-8z')} ${mine!=null?'Cambiar puja':'Pujar'}</button>`;
+    const btnPujas = CAN_LOOT ? `<button class="btn sm" data-view-bids="${a.id}">${ic('M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z')} ${bidsFor(a.id).length} puja(s)</button>` : '';
+    right = `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btnPujar}${btnPujas}</div>`;
   } else {
     right=`<span class="chip role-sanador">${winner?'Ganada por '+esc(winner.display_name):'Cerrada'}</span>`;
   }
   return `<div class="row">
-    <div class="avatar" style="width:34px;${open?'':'opacity:.7'}">⚔</div>
-    <div class="grow"><div class="name">${esc(a.item)}</div>
+    ${a.item_icon?iconBox(a.item_icon,a.item_quality):`<div class="avatar" style="width:34px;${open?'':'opacity:.7'}">⚔</div>`}
+    <div class="grow"><div class="name">${itemHTML(a)}</div>
       <div class="sub-line">
         ${a.min_bid?`<span class="chip">Mínimo ${a.min_bid}</span>`:''}
         ${!open?'':(mine!=null?`<span class="chip role-tanque">Tu puja: ${mine}</span>`:'<span class="chip">Sin pujar</span>')}
         ${a.notes?`<span class="muted" style="font-size:11.5px">${esc(a.notes)}</span>`:''}
       </div></div>
     ${right}
-    ${IS_ADMIN?`<button class="icon-btn" data-del-auction="${a.id}" title="Eliminar">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button>`:''}
+    ${CAN_LOOT?`<button class="icon-btn" data-del-auction="${a.id}" title="Eliminar">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button>`:''}
   </div>`;
 }
 
@@ -743,9 +922,23 @@ function viewAjustes(){
     <div class="grid g-2" style="margin-top:16px">
       <div class="panel"><div class="panel-h"><h3><span class="rune">ᚱ</span> Rangos</h3></div>
         <div class="panel-b"><p class="muted" style="margin-top:0;font-size:12.5px">Del líder al recluta. Los rangos los asignas tú.</p>${tagEditor('ranks')}</div></div>
-      <div class="panel"><div class="panel-h"><h3><span class="rune">ᚦ</span> Administradores</h3></div>
-        <div class="panel-b"><p class="muted" style="margin-top:0;font-size:12.5px">Un admin ve el DKP de todos y gestiona el gremio. Edita a un guerrero en el Roster para darle o quitarle el rol.</p>
-          <div class="tag-list">${state.profiles.filter(p=>p.is_admin).map(p=>`<span class="tag">${esc(p.display_name)}</span>`).join('')||'<span class="muted" style="font-size:13px">Solo tú.</span>'}</div>
+      <div class="panel"><div class="panel-h"><h3><span class="rune">ᚦ</span> Mando del gremio</h3></div>
+        <div class="panel-b">
+          <p class="muted" style="margin-top:0;font-size:12.5px">Los cargos se asignan desde el <b>Roster</b>, editando a cada guerrero.</p>
+          ${[
+            ['Líderes','gold', p=>p.is_admin, 'Todo, incluido el DKP y los ajustes.'],
+            ['Oficiales','#a98fd0', p=>p.is_officer&&!p.is_admin, 'Raids y botín: las dos cosas.'],
+            ['Raid Leaders','#5a96d2', p=>p.is_raidlead&&!p.is_officer&&!p.is_admin, 'Calendario, asistencia y roster.'],
+            ['Master Loots','#d2965a', p=>p.is_looter&&!p.is_officer&&!p.is_admin, 'Subastas, adjudicar y repartir el DKP del raid.']
+          ].map(([titulo,col,filtro,desc])=>{
+            const gente=state.profiles.filter(filtro);
+            return `<div style="margin-bottom:14px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:${col==='gold'?'var(--gold)':col};font-weight:700;margin-bottom:2px">${titulo}</div>
+              <div class="muted" style="font-size:11.5px;margin-bottom:6px">${desc}</div>
+              <div class="tag-list">${gente.map(p=>`<span class="tag">${esc(p.display_name)}</span>`).join('')||'<span class="muted" style="font-size:13px">Nadie.</span>'}</div>
+            </div>`;
+          }).join('')}
+          <div class="note">Ni el Raid Leader, ni el Master Loot, ni el Oficial <b>ven el DKP de nadie</b>. Solo tú.</div>
         </div></div>
     </div>
   </div>`;
@@ -761,11 +954,24 @@ function tagEditor(field){
     </div>`;
 }
 function classBlock(c,i){
+  const specs=(c.specs||[]).map(sp=> typeof sp==='string'?{name:sp,icon:null}:sp);
   return `<div class="cls-block">
-    <div class="top"><span class="cn">${esc(c.name)}</span>
+    <div class="top">${iconBox(c.icon,null,true)}<span class="cn" style="${c.color?`color:${esc(c.color)}`:''}">${esc(c.name)}</span>
       <button class="icon-btn" data-del-class="${i}" title="Eliminar clase">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button></div>
-    <div class="tag-list" style="margin-bottom:10px">
-      ${(c.specs||[]).length? c.specs.map((s,j)=>`<span class="tag" style="font-family:'Inter'">${esc(s)}<button data-del-spec="${i}:${j}">×</button></span>`).join('') : '<span class="muted" style="font-size:12.5px">Sin specs</span>'}
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+      <input class="clsIcon" data-ci="${i}" value="${esc(c.icon||'')}" placeholder="Icono (nombre o URL de imagen)" style="flex:1;background:var(--stone-2);border:1px solid var(--line-2);color:var(--parch);padding:7px 11px;border-radius:7px;outline:none;font-size:12.5px">
+      <input class="clsColor" data-ci="${i}" type="color" value="${esc(c.color||'#c9a24e')}" title="Color de la clase" style="width:38px;height:34px;padding:2px;background:var(--stone-2);border:1px solid var(--line-2);border-radius:7px;cursor:pointer">
+      <button class="btn sm" data-save-cls-icon="${i}">${ic('M5 13l4 4L19 7')}</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
+      ${specs.length? specs.map((sp,j)=>`
+        <div style="display:flex;align-items:center;gap:8px">
+          ${iconBox(sp.icon,null,true)}
+          <span style="flex:0 0 auto;font-size:13px;font-weight:600;min-width:90px">${esc(sp.name)}</span>
+          <input class="specIcon" data-ci="${i}" data-si="${j}" value="${esc(sp.icon||'')}" placeholder="Icono de la spec" style="flex:1;background:var(--stone-2);border:1px solid var(--line-2);color:var(--parch);padding:6px 10px;border-radius:7px;outline:none;font-size:12.5px">
+          <button class="btn sm" data-save-spec-icon="${i}:${j}">${ic('M5 13l4 4L19 7')}</button>
+          <button class="icon-btn" data-del-spec="${i}:${j}" title="Quitar spec">${ic('M18 6L6 18M6 6l12 12')}</button>
+        </div>`).join('') : '<span class="muted" style="font-size:12.5px">Sin specs</span>'}
     </div>
     <div style="display:flex;gap:8px">
       <input class="specAdd" data-ci="${i}" placeholder="Añadir spec…" style="flex:1;background:var(--stone-2);border:1px solid var(--line-2);color:var(--parch);padding:7px 11px;border-radius:7px;outline:none;font-size:13px">
@@ -773,31 +979,168 @@ function classBlock(c,i){
     </div></div>`;
 }
 
-function closeModal(){ MODAL.type=null; MODAL.eventId=null; $mroot.innerHTML=''; }
+/* ============================================================
+   EQUIPO (inventario del personaje)
+   ============================================================ */
+const SLOTS = [
+  ['head','Cabeza'],['neck','Cuello'],['shoulder','Hombros'],['back','Espalda'],
+  ['chest','Pecho'],['shirt','Camisa'],['tabard','Tabardo'],['wrist','Muñecas'],
+  ['hands','Manos'],['waist','Cintura'],['legs','Piernas'],['feet','Pies'],
+  ['finger1','Anillo 1'],['finger2','Anillo 2'],['trinket1','Abalorio 1'],['trinket2','Abalorio 2']
+];
+const SLOTS_ARMAS = [['mainhand','Mano principal'],['offhand','Mano secundaria'],['ranged','A distancia']];
+
+function gearOf(p){ return (p && p.gear) || {}; }
+function gearCount(p){ const g=gearOf(p); return Object.keys(g).filter(k=>g[k]&&g[k].name).length; }
+
+function slotHTML(p, key, label, editable){
+  const it = gearOf(p)[key];
+  const puesto = it && it.name;
+  const inner = puesto
+    ? `${iconBox(it.icon,it.q)}
+       <div class="txt"><div class="sname">${esc(label)}</div>
+         <div class="iname ${qClass(it.q)}">${it.id?`<a class="item-link ${qClass(it.q)}" href="${itemUrl(it.id)}" target="_blank" rel="noopener item=${it.id}" onclick="event.stopPropagation()">${esc(it.name)}</a>`:esc(it.name)}</div></div>`
+    : `${iconBox(null,null)}
+       <div class="txt"><div class="sname">${esc(label)}</div><div class="vacio">Vacío</div></div>`;
+  return `<div class="slot ${editable?'':'ro'}" ${editable?`data-slot="${key}" data-slot-user="${p.id}"`:''}>${inner}</div>`;
+}
+
+function viewEquipo(uid){
+  const p = profileById(uid) || ME;
+  const mine = p.id===ME.id;
+  const editable = mine || IS_ADMIN;
+  const izq = SLOTS.slice(0,8), der = SLOTS.slice(8);
+  return `<div class="view">
+    <div class="eyebrow">${mine?'Tu equipo':'Equipo de '+esc(p.display_name)}</div>
+    <div class="page-head"><h2>${mine?'Mi Equipo':esc(p.display_name)}</h2>
+      ${!mine?`<button class="btn ghost" data-tab="roster">${ic('M15 18l-6-6 6-6')} Volver al Roster</button>`:''}</div>
+    <div class="panel"><div class="panel-b">
+      <div class="gear-head">
+        <div class="avatar" style="width:44px;height:44px;flex-basis:44px;font-size:16px">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Cinzel';font-size:18px;color:var(--gold-bright)">${esc(p.display_name)}</div>
+          <div class="sub-line">
+            ${razaHTML(p)}
+            <span class="chip">${classIconHTML(p.char_class,p.spec)}${classNameHTML(p.char_class,p.spec)}</span>
+            ${p.role?`<span class="chip ${roleClass(p.role)}"><span class="dot"></span>${esc(p.role)}</span>`:''}
+          </div>
+        </div>
+        <span class="muted" style="font-size:12.5px">${gearCount(p)} / ${SLOTS.length+SLOTS_ARMAS.length} piezas</span>
+      </div>
+      ${editable?'<div class="note" style="margin-bottom:14px">Pulsa en una ranura para poner o cambiar la pieza. Copia el enlace del objeto desde <b>db.ascension.gg</b>.</div>':''}
+      <div class="doll">
+        <div class="doll-col">${izq.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
+        <div class="doll-col">${der.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
+      </div>
+      <div class="doll-weapons">${SLOTS_ARMAS.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
+    </div></div>
+  </div>`;
+}
+
+function gearModal(uid, slotKey){
+  const p = profileById(uid) || ME;
+  const label = ([...SLOTS,...SLOTS_ARMAS].find(x=>x[0]===slotKey)||[null,slotKey])[1];
+  const it = gearOf(p)[slotKey] || {name:'',id:null,icon:'',q:''};
+  openModal(`<div class="modal"><div class="modal-h"><h3>${esc(label)}</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Nombre del objeto</label><input id="gName" value="${esc(it.name||'')}" placeholder="p.ej. Yelmo del Trueno"></div>
+      <div class="field"><label>Enlace o ID <span class="lock">(db.ascension.gg)</span></label>
+        <input id="gId" value="${it.id||''}" placeholder="Pega el enlace del objeto o solo el número"></div>
+      <div class="field-row">
+        <div class="field"><label>Icono <span class="lock">(opcional)</span></label>
+          <input id="gIcon" value="${esc(it.icon||'')}" placeholder="inv_helmet_21"></div>
+        <div class="field"><label>Calidad</label>
+          <select id="gQ"><option value="">— Sin definir —</option>
+            ${QUALITIES.map(([v,n])=>`<option value="${v}" ${String(it.q)===String(v)?'selected':''}>${n}</option>`).join('')}
+          </select></div>
+      </div>
+      <div class="note">Para el <b>icono</b>: en la ficha del objeto en db.ascension.gg, clic derecho sobre su imagen → <i>Copiar dirección de imagen</i> y pégala aquí. También vale solo el nombre del icono.</div>
+    </div>
+    <div class="modal-f">
+      ${it.name?`<button class="btn danger" data-gear-clear="${uid}:${slotKey}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Quitar</button>`:''}
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn gold" data-gear-save="${uid}:${slotKey}">${ic('M5 13l4 4L19 7')} Guardar</button>
+    </div></div>`,'form');
+}
+async function saveGear(uid, slotKey){
+  const p = profileById(uid) || ME;
+  const name=($mroot.querySelector('#gName').value||'').trim();
+  if(!name){ toast('Ponle nombre al objeto'); return; }
+  const g = JSON.parse(JSON.stringify(gearOf(p)));
+  g[slotKey] = { name,
+    id: parseItemId($mroot.querySelector('#gId').value),
+    icon: ($mroot.querySelector('#gIcon').value||'').trim() || null,
+    q: $mroot.querySelector('#gQ').value ? +$mroot.querySelector('#gQ').value : null };
+  const { error } = await sb.from('profiles').update({ gear:g }).eq('id', uid);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); if(uid===ME.id) ME.gear=g;
+  await refetch('profiles'); toast('Equipo actualizado');
+}
+async function clearGear(uid, slotKey){
+  const p = profileById(uid) || ME;
+  const g = JSON.parse(JSON.stringify(gearOf(p)));
+  delete g[slotKey];
+  const { error } = await sb.from('profiles').update({ gear:g }).eq('id', uid);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); if(uid===ME.id) ME.gear=g;
+  await refetch('profiles'); toast('Pieza retirada');
+}
+
+function closeModal(){
+  const habiaModal = !!MODAL.type;
+  MODAL.type=null; MODAL.eventId=null; $mroot.innerHTML='';
+  // Al cerrar, repinta la vista de debajo para que refleje los últimos cambios
+  if(habiaModal && ME) render();
+}
 function openModal(html,type){ MODAL.type=type||'form'; $mroot.innerHTML=`<div class="overlay" data-overlay>${html}</div>`;
-  const f=$mroot.querySelector('input,select,textarea'); if(f) setTimeout(()=>f.focus(),40); }
+  const f=$mroot.querySelector('input,select,textarea'); if(f) setTimeout(()=>f.focus(),40);
+  refreshTooltips(); }
 $mroot.addEventListener('click',e=>{ if(e.target.dataset.overlay!==undefined) closeModal(); });
 function optionList(arr,sel){ return (arr||[]).map(o=>`<option value="${esc(o)}" ${o===sel?'selected':''}>${esc(o)}</option>`).join(''); }
+// Igual que optionList pero con una opción vacía delante, para que nunca
+// se auto-seleccione el primer valor de la lista sin que nadie lo elija.
+function optionListVacia(arr,sel,texto){
+  const vacia = `<option value="" ${!sel?'selected':''}>— ${texto} —</option>`;
+  return vacia + optionList(arr,sel);
+}
 
 function memberModal(id){
   const p = profileById(id) || ME;
   const mine = p.id===ME.id;
   const canAdmin = IS_ADMIN;
   const classes = classNames();
-  const cls = p.char_class || classes[0] || '';
+  const cls = p.char_class || '';   // sin clase = sin clase; no forzamos la primera
   openModal(`<div class="modal"><div class="modal-h"><h3>${mine?'Mi ficha':'Editar guerrero'}</h3>
       <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
       <div class="field"><label>Nombre en el gremio</label><input id="mName" value="${esc(p.display_name||'')}" placeholder="Tu nombre de personaje"></div>
       <div class="field-row">
-        <div class="field"><label>Clase</label><select id="mCls">${optionList(classes,cls)}${classes.length?'':'<option value="">(sin clases)</option>'}</select></div>
-        <div class="field"><label>Especialización</label><select id="mSpec">${optionList(specsOf(cls),p.spec)}</select></div>
+        <div class="field"><label>Raza</label><select id="mRace">${optionListVacia(razaNames(),p.race,'Elige raza')}</select></div>
+        <div class="field"><label>Género</label>
+          <div class="seg" id="mGen"><div class="opt ${p.gender!=='F'?'sel':''}" data-gen="M">♂ Macho</div><div class="opt ${p.gender==='F'?'sel':''}" data-gen="F">♀ Hembra</div></div></div>
       </div>
-      <div class="field"><label>Rol</label><select id="mRole">${optionList(state.settings.roles,p.role)}</select></div>
+      <div class="field-row">
+        <div class="field"><label>Clase</label><select id="mCls">${optionListVacia(classes,cls,'Elige clase')}</select></div>
+        <div class="field"><label>Especialización</label><select id="mSpec">${optionListVacia(specsOf(cls),p.spec,'Elige spec')}</select></div>
+      </div>
+      <div class="field"><label>Rol</label><select id="mRole">${optionListVacia(state.settings.roles,p.role,'Elige rol')}</select></div>
       <div class="field"><label>Rango ${canAdmin?'':'<span class="lock">(lo asigna la dirección)</span>'}</label>
-        <select id="mRank" ${canAdmin?'':'disabled'}>${optionList(state.settings.ranks,p.rank)}</select></div>
-      ${canAdmin&&!mine?`<div class="field" style="margin-bottom:0"><label>Rol en la app</label>
-        <div class="seg" id="mAdmin"><div class="opt ${!p.is_admin?'sel':''}" data-adm="0">Jugador</div><div class="opt ${p.is_admin?'sel':''}" data-adm="1">Administrador</div></div></div>`:''}
+        <select id="mRank" ${canAdmin?'':'disabled'}>${optionListVacia(state.settings.ranks,p.rank,'Sin rango')}</select></div>
+      ${canAdmin&&!mine?`<div class="field" style="margin-bottom:0"><label>Cargo en el gremio</label>
+        <div class="seg seg-wrap" id="mAdmin">
+          <div class="opt ${cargoDe(p)===null?'sel':''}" data-adm="0">Miembro</div>
+          <div class="opt ${p.is_raidlead&&!p.is_officer&&!p.is_admin?'sel':''}" data-adm="rl">Raid Leader</div>
+          <div class="opt ${p.is_looter&&!p.is_officer&&!p.is_admin?'sel':''}" data-adm="ml">Master Loot</div>
+          <div class="opt ${p.is_officer&&!p.is_admin?'sel':''}" data-adm="of">Oficial</div>
+          <div class="opt ${p.is_admin?'sel':''}" data-adm="li">Líder</div>
+        </div>
+        <div class="note" style="margin-top:8px">
+          <b>Raid Leader</b> · calendario y roster: convoca eventos, pasa lista, corrige fichas.<br>
+          <b>Master Loot</b> · botín y DKP del raid: abre subastas, adjudica y reparte el DKP de asistencia.<br>
+          <b>Oficial</b> · las dos cosas.<br>
+          <span class="muted">Ninguno ve el DKP de los demás ni puede darlo a mano. Eso solo el Líder.</span>
+        </div></div>`:''}
     </div>
     <div class="modal-f">
       ${canAdmin&&!mine?`<button class="btn danger" data-del-member="${p.id}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Expulsar</button>`:''}
@@ -805,17 +1148,29 @@ function memberModal(id){
       <button class="btn gold" data-save-member="${p.id}">${ic('M5 13l4 4L19 7')} Guardar</button>
     </div></div>`,'form');
   const cs=$mroot.querySelector('#mCls'), ss=$mroot.querySelector('#mSpec');
-  if(cs) cs.addEventListener('change',()=>{ ss.innerHTML=optionList(specsOf(cs.value),''); });
+  if(cs) cs.addEventListener('change',()=>{ ss.innerHTML=optionListVacia(specsOf(cs.value),'','Elige spec'); });
   const seg=$mroot.querySelector('#mAdmin'); if(seg) seg.addEventListener('click',e=>{const o=e.target.closest('[data-adm]');if(!o)return;seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
+  const gen=$mroot.querySelector('#mGen'); if(gen) gen.addEventListener('click',e=>{const o=e.target.closest('[data-gen]');if(!o)return;gen.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
 }
 async function saveMember(id){
   const name=($mroot.querySelector('#mName').value||'').trim(); if(!name){ toast('Ponle nombre'); return; }
-  const patch={ display_name:name, char_class:$mroot.querySelector('#mCls').value||null, spec:$mroot.querySelector('#mSpec').value||null, role:$mroot.querySelector('#mRole').value||null };
+  const patch={ display_name:name, char_class:$mroot.querySelector('#mCls').value||null, spec:$mroot.querySelector('#mSpec').value||null, role:$mroot.querySelector('#mRole').value||null,
+    race: $mroot.querySelector('#mRace').value||null,
+    gender: ($mroot.querySelector('#mGen .opt.sel')?.dataset.gen)||'M' };
   if(IS_ADMIN){ patch.rank=$mroot.querySelector('#mRank').value||null;
-    const seg=$mroot.querySelector('#mAdmin'); if(seg){ patch.is_admin = seg.querySelector('.opt.sel')?.dataset.adm==='1'; } }
+    const seg=$mroot.querySelector('#mAdmin');
+    if(seg){ const n=seg.querySelector('.opt.sel')?.dataset.adm||'0';
+      patch.is_admin    = (n==='li');
+      patch.is_officer  = (n==='of');
+      patch.is_raidlead = (n==='rl');
+      patch.is_looter   = (n==='ml'); } }
   const { error } = await sb.from('profiles').update(patch).eq('id', id);
   if(error){ toast(error.message,true); return; }
-  closeModal(); if(id===ME.id){ ME={...ME,...patch}; IS_ADMIN=!!ME.is_admin; } await refetch('profiles'); toast('Ficha guardada');
+  closeModal();
+  if(id===ME.id){ ME={...ME,...patch}; IS_ADMIN=!!ME.is_admin;
+    CAN_RAID=!!(ME.is_admin||ME.is_officer||ME.is_raidlead);
+    CAN_LOOT=!!(ME.is_admin||ME.is_officer||ME.is_looter); }
+  await refetch('profiles'); toast('Ficha guardada');
 }
 async function delMember(id){
   const p=profileById(id); if(!p) return;
@@ -840,7 +1195,8 @@ function eventModal(e){
         <div class="field"><label>Hora</label><input id="eTime" type="time" value="${e.time}"></div></div>
       <div class="field-row">
         <div class="field"><label>Plazas</label><input id="eSize" type="number" min="1" value="${e.size||''}" placeholder="20"></div>
-        <div class="field"><label>DKP por asistir</label><input id="eDkp" type="number" min="0" value="${e.dkp??state.settings.dkp_default}"></div></div>
+        <div class="field"><label>DKP por asistir ${IS_ADMIN?'':'<span class="lock">(lo fija el líder)</span>'}</label>
+          <input id="eDkp" type="number" min="0" value="${e.dkp??state.settings.dkp_default}" ${IS_ADMIN?'':'disabled'}></div></div>
       <div class="field"><label>Notas</label><textarea id="eNotes" placeholder="Consumibles, tácticas, requisitos…">${esc(e.notes||'')}</textarea></div>
     </div>
     <div class="modal-f">
@@ -875,7 +1231,7 @@ function eventDetailModal(id){
   const c=signCounts(e);
   const list=[...state.profiles].sort((a,b)=>(a.display_name||'').localeCompare(b.display_name||''));
   const rows=list.map(p=>{
-    const st=statusOf(e.id,p.id); const editable = p.id===ME.id || IS_ADMIN;
+    const st=statusOf(e.id,p.id); const editable = p.id===ME.id || CAN_RAID;
     return `<div class="signup-row">
       <div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:12px">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
       <div class="grow"><div class="name" style="font-size:14px">${esc(p.display_name)}${p.id===ME.id?' <span class="muted">· tú</span>':''}</div>
@@ -892,13 +1248,13 @@ function eventDetailModal(id){
     <div class="modal-b">
       <div class="tally">${tallyChips(c)}<div class="t muted" style="margin-left:auto">Confirmados <b class="mono" style="color:var(--moss)">${c._total}</b>${e.size?` / ${e.size}`:''}</div></div>
       ${e.notes?`<div class="note" style="margin-bottom:14px">${esc(e.notes)}</div>`:''}
-      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600;margin-bottom:6px">Inscripciones ${IS_ADMIN?'— tú puedes marcar a cualquiera':'— marca tu asistencia'}</div>
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600;margin-bottom:6px">Inscripciones ${CAN_RAID?'— tú puedes marcar a cualquiera':'— marca tu asistencia'}</div>
       ${rows||'<div class="empty muted">Aún no hay guerreros.</div>'}
     </div>
     <div class="modal-f">
-      ${IS_ADMIN?`<button class="btn ghost" data-edit-event="${e.id}">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')} Editar</button>
-      <button class="btn gold" data-settle="${e.id}" ${e.settled?'disabled style="opacity:.5"':''}>${ic('M5 13l4 4L19 7')} ${e.settled?'DKP repartido':`Repartir ${e.dkp} DKP a confirmados`}</button>`
-      :`<button class="btn ghost" data-close>Cerrar</button>`}
+      ${CAN_RAID?`<button class="btn ghost" data-edit-event="${e.id}">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')} Editar</button>`:''}
+      ${CAN_LOOT?`<button class="btn gold" data-settle="${e.id}" ${e.settled?'disabled style="opacity:.5"':''}>${ic('M5 13l4 4L19 7')} ${e.settled?'DKP repartido':`Repartir ${e.dkp} DKP a confirmados`}</button>`
+        :`<button class="btn ghost" data-close>Cerrar</button>`}
     </div></div>`,'eventDetail');
   MODAL.eventId=id;
   $mroot.querySelectorAll('.react').forEach(r=>r.addEventListener('click',async ev=>{
@@ -912,15 +1268,14 @@ function eventDetailModal(id){
 }
 async function settleEvent(id){
   const e=state.events.find(x=>x.id===id); if(!e||e.settled) return;
-  const attendees=signupsFor(id).filter(s=>s.status==='conf').map(s=>s.user_id);
-  if(!attendees.length){ toast('No hay confirmados'); return; }
-  if(!confirm(`¿Repartir ${e.dkp} DKP a ${attendees.length} confirmado(s)?`)) return;
-  const rows=attendees.map(uid=>({user_id:uid,amount:e.dkp,reason:`Asistencia · ${e.title}`,type:'award',date:e.date}));
-  const { error } = await sb.from('dkp_log').insert(rows);
+  const attendees=signupsFor(id).filter(s=>s.status==='conf').length;
+  if(!attendees){ toast('No hay confirmados'); return; }
+  if(!confirm(`¿Repartir ${e.dkp} DKP a ${attendees} confirmado(s)?`)) return;
+  // El reparto lo hace el servidor: comprueba permisos y evita pagar dos veces.
+  const { data, error } = await sb.rpc('settle_event', { p_event: id });
   if(error){ toast(error.message,true); return; }
-  await sb.from('events').update({settled:true}).eq('id',id);
   await Promise.all([refetch('dkp_log'),refetch('events')]);
-  eventDetailModal(id); toast(`${e.dkp} DKP a ${attendees.length} guerreros`);
+  eventDetailModal(id); toast(`${e.dkp} DKP repartidos a ${data??attendees} guerreros`);
 }
 
 function awardModal(){
@@ -974,6 +1329,17 @@ function auctionModal(a){
   openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar subasta':'Nueva subasta'}</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
       <div class="field"><label>Objeto de botín</label><input id="aItem" value="${esc(a.item)}" placeholder="p.ej. Arco del Lobo Invernal"></div>
+      <div class="field"><label>Enlace o ID <span class="lock">(db.ascension.gg)</span></label>
+        <input id="aItemId" value="${a.item_id||''}" placeholder="Pega el enlace del objeto o solo el número"></div>
+      <div class="field-row">
+        <div class="field"><label>Icono <span class="lock">(opcional)</span></label>
+          <input id="aIcon" value="${esc(a.item_icon||'')}" placeholder="inv_sword_39"></div>
+        <div class="field"><label>Calidad</label>
+          <select id="aQ"><option value="">— Sin definir —</option>
+            ${QUALITIES.map(([v,n])=>`<option value="${v}" ${String(a.item_quality)===String(v)?'selected':''}>${n}</option>`).join('')}
+          </select></div>
+      </div>
+      <div class="note" style="margin-bottom:14px">Rellenando esto, el gremio verá el objeto <b>con su icono y color</b>, y podrá abrir su ficha con las estadísticas.</div>
       <div class="field"><label>Puja mínima (DKP)</label><input id="aMin" type="number" min="0" value="${a.min_bid||0}"></div>
       <div class="field"><label>Raid asociado (opcional)</label><select id="aEvent"><option value="">— Ninguno —</option>${evs.map(e=>`<option value="${e.id}" ${a.event_id===e.id?'selected':''}>${esc(e.title)} · ${fmtDate(e.date)}</option>`).join('')}</select></div>
       <div class="field" style="margin-bottom:0"><label>Notas</label><textarea id="aNotes" placeholder="Condiciones, prioridad de rol, etc.">${esc(a.notes||'')}</textarea></div>
@@ -986,7 +1352,11 @@ function auctionModal(a){
 }
 async function saveAuction(id){
   const item=($mroot.querySelector('#aItem').value||'').trim(); if(!item){ toast('Falta el objeto'); return; }
-  const row={ item, min_bid:Math.max(0,+$mroot.querySelector('#aMin').value||0), event_id:$mroot.querySelector('#aEvent').value||null, notes:($mroot.querySelector('#aNotes').value||'').trim() };
+  const row={ item, item_id: parseItemId($mroot.querySelector('#aItemId').value),
+    item_icon: ($mroot.querySelector('#aIcon').value||'').trim() || null,
+    item_quality: $mroot.querySelector('#aQ').value ? +$mroot.querySelector('#aQ').value : null,
+    min_bid:Math.max(0,+$mroot.querySelector('#aMin').value||0),
+    event_id:$mroot.querySelector('#aEvent').value||null, notes:($mroot.querySelector('#aNotes').value||'').trim() };
   let error;
   if(id){ ({error}=await sb.from('auctions').update(row).eq('id',id)); }
   else { ({error}=await sb.from('auctions').insert({...row,status:'open'})); }
@@ -1007,8 +1377,10 @@ function bidModal(aid){
   openModal(`<div class="modal"><div class="modal-h"><h3>Pujar en secreto</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
       <div style="text-align:center;margin-bottom:14px">
-        <div style="font-family:'Cinzel';font-size:18px;color:var(--gold-bright)">${esc(a.item)}</div>
-        <div class="muted" style="font-size:12.5px">Puja mínima: ${a.min_bid||0} · Tu DKP disponible: <b class="dkp-val">${bal}</b></div>
+        ${a.item_icon?`<div style="display:flex;justify-content:center;margin-bottom:8px">${iconBox(a.item_icon,a.item_quality)}</div>`:''}
+        <div style="font-family:'Cinzel';font-size:18px">${itemHTML(a)}</div>
+        ${a.item_id?`<div style="font-size:12px;margin-top:2px"><a class="item-link" href="${itemUrl(a.item_id)}" target="_blank" rel="noopener">Ver estadísticas del objeto ↗</a></div>`:''}
+        <div class="muted" style="font-size:12.5px;margin-top:4px">Puja mínima: ${a.min_bid||0} · Tu DKP disponible: <b class="dkp-val">${bal}</b></div>
       </div>
       <div class="field" style="margin-bottom:6px"><label>Tu puja (DKP)</label><input id="bidAmt" type="number" min="${a.min_bid||0}" value="${cur!=null?cur:(a.min_bid||0)}"></div>
       <div class="note">Nadie verá esta cantidad. Solo la dirección la conoce al adjudicar. Puedes cambiarla mientras la subasta siga abierta.</div>
@@ -1049,14 +1421,14 @@ function auctionBidsModal(aid){
     </div>`; }).join('');
   openModal(`<div class="modal wide"><div class="modal-h">
       <div><div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700">Subasta ${a.status==='open'?'abierta':'adjudicada'}</div>
-        <h3 style="margin-top:3px">${esc(a.item)}</h3></div>
+        <h3 style="margin-top:3px">${itemHTML(a)}</h3></div>
       <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
       <div class="note" style="margin-bottom:14px">Vista solo para la dirección. Al adjudicar, se descuenta la puja del ganador de su DKP y el objeto aparece en su cuenta.</div>
       ${bids.length? rows : '<div class="empty muted">Nadie ha pujado todavía.</div>'}
     </div>
     <div class="modal-f">
-      ${a.status==='open'?`<button class="btn ghost" data-edit-auction="${aid}">Editar</button>`:''}
+      ${a.status==='open'&&CAN_LOOT?`<button class="btn ghost" data-edit-auction="${aid}">Editar</button>`:''}
       <button class="btn ghost" data-close>Cerrar</button>
     </div></div>`,'auctionBids');
   MODAL.eventId=aid;
@@ -1066,11 +1438,11 @@ async function adjudicate(aid,winnerId){
   const b=state.bids.find(x=>x.auction_id===aid && x.user_id===winnerId); if(!b) return;
   const p=profileById(winnerId);
   if(!confirm(`¿Adjudicar "${a.item}" a ${p?p.display_name:'este guerrero'} por ${b.amount} DKP?`)) return;
-  const { error } = await sb.from('dkp_log').insert({user_id:winnerId,amount:-b.amount,reason:`Botín · ${a.item}`,type:'spend',date:todayISO()});
+  // La adjudicación la hace el servidor: cobra la puja y cierra la subasta.
+  const { data, error } = await sb.rpc('award_auction', { p_auction: aid, p_winner: winnerId });
   if(error){ toast(error.message,true); return; }
-  await sb.from('auctions').update({status:'closed',winner_id:winnerId}).eq('id',aid);
   await Promise.all([refetch('dkp_log'),refetch('auctions')]);
-  auctionBidsModal(aid); toast(`Adjudicado a ${p?p.display_name:''} · −${b.amount} DKP`);
+  auctionBidsModal(aid); toast(`Adjudicado a ${p?p.display_name:''} · −${data??b.amount} DKP`);
 }
 
 async function saveSettings(patch,msg){
@@ -1091,26 +1463,42 @@ async function delTag(field,i){ const arr=[...(state.settings[field]||[])]; arr.
 async function addClass(){
   const name=(prompt('Nombre de la clase:')||'').trim(); if(!name) return;
   const arr=[...(state.settings.classes||[])]; if(arr.some(c=>c.name===name)){ toast('Ya existe'); return; }
-  arr.push({name,specs:[]}); if(await saveSettings({classes:arr})){ render(); toast('Clase añadida'); }
+  arr.push({name,icon:null,color:'#c9a24e',specs:[]}); if(await saveSettings({classes:arr})){ render(); toast('Clase añadida'); }
 }
 async function delClass(i){ const arr=[...(state.settings.classes||[])]; if(!confirm(`¿Eliminar la clase "${arr[i].name}"?`))return; arr.splice(i,1); if(await saveSettings({classes:arr})) render(); }
+function normSpecs(c){ c.specs=(c.specs||[]).map(sp=> typeof sp==='string'?{name:sp,icon:null}:sp); return c; }
 async function addSpec(ci){
   const inp=$root.querySelector(`.specAdd[data-ci="${ci}"]`); if(!inp) return; const v=(inp.value||'').trim(); if(!v) return;
-  const arr=JSON.parse(JSON.stringify(state.settings.classes||[])); arr[ci].specs=arr[ci].specs||[];
-  if(arr[ci].specs.includes(v)){ toast('Ya existe'); return; } arr[ci].specs.push(v);
+  const arr=JSON.parse(JSON.stringify(state.settings.classes||[])); normSpecs(arr[ci]);
+  if(arr[ci].specs.some(x=>x.name===v)){ toast('Ya existe'); return; }
+  arr[ci].specs.push({name:v,icon:null});
   if(await saveSettings({classes:arr})) render();
 }
-async function delSpec(ci,si){ const arr=JSON.parse(JSON.stringify(state.settings.classes||[])); arr[ci].specs.splice(si,1); if(await saveSettings({classes:arr})) render(); }
+async function delSpec(ci,si){ const arr=JSON.parse(JSON.stringify(state.settings.classes||[])); normSpecs(arr[ci]); arr[ci].specs.splice(si,1); if(await saveSettings({classes:arr})) render(); }
+async function saveClassIcon(ci){
+  const inp=$root.querySelector(`.clsIcon[data-ci="${ci}"]`); if(!inp) return;
+  const col=$root.querySelector(`.clsColor[data-ci="${ci}"]`);
+  const arr=JSON.parse(JSON.stringify(state.settings.classes||[]));
+  arr[ci].icon=(inp.value||'').trim()||null;
+  if(col) arr[ci].color=col.value||null;
+  if(await saveSettings({classes:arr})){ render(); toast('Clase guardada'); }
+}
+async function saveSpecIcon(ci,si){
+  const inp=$root.querySelector(`.specIcon[data-ci="${ci}"][data-si="${si}"]`); if(!inp) return;
+  const arr=JSON.parse(JSON.stringify(state.settings.classes||[])); normSpecs(arr[ci]);
+  arr[ci].specs[si].icon=(inp.value||'').trim()||null;
+  if(await saveSettings({classes:arr})){ render(); toast('Icono guardado'); }
+}
 
 document.addEventListener('click',e=>{
   const t=e.target;
-  const tab=t.closest('[data-tab]'); if(tab){ state.ui.view=tab.dataset.tab; render(); return; }
+  const tab=t.closest('[data-tab]'); if(tab){ state.ui.view=tab.dataset.tab; if(tab.dataset.tab==='equipo') state.ui.gearUser=ME.id; render(); return; }
   const cal=t.closest('[data-cal]'); if(cal){ let m=state.ui.calM+(+cal.dataset.cal),y=state.ui.calY; if(m<0){m=11;y--} if(m>11){m=0;y++} state.ui.calM=m; state.ui.calY=y; render(); return; }
   const act=t.closest('[data-act]'); if(act){ handleAct(act.dataset.act); return; }
   if(t.closest('[data-close]')){ closeModal(); return; }
   if(t.closest('[data-edit-me]')){ memberModal(ME.id); return; }
   const oe=t.closest('[data-open-event]'); if(oe){ eventDetailModal(oe.dataset.openEvent); return; }
-  const day=t.closest('[data-day]'); if(day && IS_ADMIN && !t.closest('[data-open-event]')){ eventModal({type:'Raid',title:'',date:day.dataset.day,time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''}); return; }
+  const day=t.closest('[data-day]'); if(day && CAN_RAID && !t.closest('[data-open-event]')){ eventModal({type:'Raid',title:'',date:day.dataset.day,time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''}); return; }
   const em=t.closest('[data-edit-member]'); if(em){ memberModal(em.dataset.editMember); return; }
   const ee=t.closest('[data-edit-event]'); if(ee){ eventModal(state.events.find(x=>x.id===ee.dataset.editEvent)); return; }
   const sm=t.closest('[data-save-member]'); if(sm){ saveMember(sm.dataset.saveMember); return; }
@@ -1123,6 +1511,12 @@ document.addEventListener('click',e=>{
   const at=t.closest('[data-add-tag]'); if(at){ addTag(at.dataset.addTag); return; }
   const dt=t.closest('[data-del-tag]'); if(dt){ const [f,i]=dt.dataset.delTag.split(':'); delTag(f,+i); return; }
   const acl=t.closest('[data-del-class]'); if(acl){ delClass(+acl.dataset.delClass); return; }
+  const sg=t.closest('[data-see-gear]'); if(sg){ state.ui.gearUser=sg.dataset.seeGear; state.ui.view='equipo'; render(); return; }
+  const sl=t.closest('[data-slot]'); if(sl){ gearModal(sl.dataset.slotUser, sl.dataset.slot); return; }
+  const gs=t.closest('[data-gear-save]'); if(gs){ const [u,k]=gs.dataset.gearSave.split(':'); saveGear(u,k); return; }
+  const gc=t.closest('[data-gear-clear]'); if(gc){ const [u,k]=gc.dataset.gearClear.split(':'); clearGear(u,k); return; }
+  const sci=t.closest('[data-save-cls-icon]'); if(sci){ saveClassIcon(+sci.dataset.saveClsIcon); return; }
+  const ssi=t.closest('[data-save-spec-icon]'); if(ssi){ const [ci,si]=ssi.dataset.saveSpecIcon.split(':'); saveSpecIcon(+ci,+si); return; }
   const ac=t.closest('[data-add-spec]'); if(ac){ addSpec(+ac.dataset.addSpec); return; }
   const dsp=t.closest('[data-del-spec]'); if(dsp){ const [ci,si]=dsp.dataset.delSpec.split(':'); delSpec(+ci,+si); return; }
   const sa=t.closest('[data-save-auction]'); if(sa){ saveAuction(sa.dataset.saveAuction); return; }
@@ -1150,7 +1544,9 @@ document.addEventListener('change',e=>{ if(e.target.id==='rosterRole'){ state.ui
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape') closeModal();
   if(e.key==='Enter'){ if(e.target.classList.contains('tagAdd')) addTag(e.target.dataset.field);
-    if(e.target.classList.contains('specAdd')) addSpec(+e.target.dataset.ci); }
+    if(e.target.classList.contains('specAdd')) addSpec(+e.target.dataset.ci);
+    if(e.target.classList.contains('clsIcon')) saveClassIcon(+e.target.dataset.ci);
+    if(e.target.classList.contains('specIcon')) saveSpecIcon(+e.target.dataset.ci,+e.target.dataset.si); }
 });
 
 boot();
