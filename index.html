@@ -394,7 +394,7 @@ const COA = {
   "Ranger":           ["#A8D840","Archery","Brigand"],
   "Chronomancer":     ["#E8C840","Duality","Artificer"],
   "Necromancer":      ["#40D8A0","Death","Animation","Rime"],
-  "Pyromancer":       ["#F07830","Incineration","Draconic","Phoenix"],
+  "Pyromancer":       ["#F07830","Incineration","Draconic","Flameweaving"],
   "Cultist":          ["#A040E0","Godblade","Corruption","Influence","Dreadnought"],
   "Starcaller":       ["#48C8F0","Warden","Sentinel","Moon Priest","Moon Guard"],
   "Sun Cleric":       ["#F0A030","Piety","Seraphim","Blessings","Valkyrie"],
@@ -1353,7 +1353,7 @@ function memberModal(id){
       <div class="field-row">
         <div class="field"><label>Raza</label><select id="mRace">${optionListVacia(razaNames(),p.race,'Elige raza')}</select></div>
         <div class="field"><label>Género</label>
-          <div class="seg" id="mGen"><div class="opt ${p.gender!=='F'?'sel':''}" data-gen="M">♂ Macho</div><div class="opt ${p.gender==='F'?'sel':''}" data-gen="F">♀ Hembra</div></div></div>
+          <div class="seg" id="mGen"><div class="opt ${p.gender!=='F'?'sel':''}" data-gen="M">♂ Hombre</div><div class="opt ${p.gender==='F'?'sel':''}" data-gen="F">♀ Mujer</div></div></div>
       </div>
       <div class="field-row">
         <div class="field"><label>Clase</label><select id="mCls">${optionListVacia(classes,cls,'Elige clase')}</select></div>
