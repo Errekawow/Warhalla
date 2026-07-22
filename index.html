@@ -129,20 +129,54 @@
   .ic-box{width:44px;height:44px;flex:0 0 44px;border-radius:6px;border:2px solid var(--line-2);background:#0a0d12;overflow:hidden;display:grid;place-items:center;position:relative}
   .ic-box.sm{width:30px;height:30px;flex-basis:30px;border-width:1px;border-radius:5px}
   .ic-box .ph{font-size:15px;color:var(--muted-2)}
-  /* Muñeco de equipo */
-  .doll{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  @media(max-width:700px){.doll{grid-template-columns:1fr;gap:10px}}
-  .doll-col{display:flex;flex-direction:column;gap:8px}
-  .slot{display:flex;align-items:center;gap:10px;padding:6px;border:1px solid var(--line);border-radius:9px;background:var(--stone-2);cursor:pointer;transition:.12s;min-height:58px}
-  .slot:hover{border-color:var(--gold-dim);background:var(--stone-3)}
-  .slot.ro{cursor:default} .slot.ro:hover{border-color:var(--line);background:var(--stone-2)}
-  .slot .txt{flex:1;min-width:0}
-  .slot .sname{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
-  .slot .iname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-  .slot .vacio{font-size:13px;color:var(--muted-2);font-style:italic}
-  .doll-weapons{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-  .doll-weapons .slot{flex:1;min-width:190px}
+  /* ---------- MUÑECO DE EQUIPO (estilo ficha de personaje) ---------- */
+  .doll{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;
+        padding:16px 6px 6px;background:
+          radial-gradient(120% 80% at 50% 0%,rgba(201,162,78,.07),transparent 60%);border-radius:12px}
+  .doll-col{display:flex;flex-direction:column;gap:9px}
+  .gslot{width:56px;height:56px;flex:0 0 56px;border-radius:9px;border:2px solid var(--line-2);
+         background:linear-gradient(180deg,#0d1117,#080b10);position:relative;overflow:visible;
+         display:grid;place-items:center;transition:.13s;cursor:default}
+  .gslot.edit{cursor:pointer}
+  .gslot.edit:hover{border-color:var(--gold-dim);transform:translateY(-1px);
+                    box-shadow:0 4px 14px rgba(0,0,0,.5)}
+  .gslot .gimg{width:100%;height:100%;object-fit:cover;display:block;border-radius:7px}
+  .gslot .glbl{font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#495566;
+               font-weight:800;text-align:center;line-height:1.15;padding:3px;user-select:none}
+  /* etiqueta flotante con el nombre del objeto */
+  .gslot .gtip{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);
+       background:#0b0e14;border:1px solid var(--line-2);border-radius:7px;padding:5px 9px;
+       font-size:12px;font-weight:600;white-space:nowrap;max-width:210px;overflow:hidden;
+       text-overflow:ellipsis;opacity:0;pointer-events:none;transition:.13s;z-index:40;
+       box-shadow:0 8px 22px rgba(0,0,0,.6)}
+  .gslot:hover .gtip{opacity:1}
+  @media(hover:none){.gslot .gtip{display:none}}
+  /* zona central: el personaje */
+  .doll-center{display:flex;flex-direction:column;align-items:center;justify-content:center;
+       gap:9px;padding:10px 4px;min-height:200px;text-align:center}
+  .doll-portrait{width:104px;height:104px;border-radius:14px;border:2px solid var(--line-2);
+       background:linear-gradient(180deg,#1a2130,#0c1017);display:grid;place-items:center;
+       overflow:hidden;font-family:'Cinzel';font-size:36px;color:var(--gold);
+       box-shadow:inset 0 0 30px rgba(0,0,0,.6)}
+  .doll-portrait img{width:100%;height:100%;object-fit:cover}
+  .doll-name{font-family:'Cinzel';font-size:19px;color:var(--gold-bright);line-height:1.15}
+  .doll-sub{display:flex;flex-direction:column;align-items:center;gap:5px}
+  .doll-count{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted)}
+  /* fila de armas */
+  .doll-weapons{display:flex;gap:9px;justify-content:center;margin-top:14px;
+       padding-top:14px;border-top:1px solid var(--line)}
+  @media(max-width:430px){
+    .doll{gap:7px;padding:10px 2px 4px}
+    .gslot{width:48px;height:48px;flex-basis:48px;border-radius:8px}
+    .doll-portrait{width:80px;height:80px;font-size:28px}
+    .doll-name{font-size:16px}
+    .doll-center{min-height:170px}
+  }
   .gear-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .chip-people{display:flex;flex-wrap:wrap;gap:7px}
+  .person-chip{display:inline-flex;align-items:center;gap:5px;background:var(--stone-2);border:1px solid var(--line-2);border-radius:20px;padding:4px 10px;font-size:13px;font-weight:500}
+  .person-chip button{background:none;border:none;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 2px;font-weight:700}
+  .person-chip button:hover{color:#e05a5a}
   .pos{color:var(--moss)} .neg{color:#e79a92}
   .lock{font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
   .lock svg{width:12px;height:12px}
@@ -341,15 +375,55 @@ function badgeCargo(p,ml){
   const cls = c==='Líder' ? 'badge-admin' : (c==='Oficial' ? 'badge-officer' : (c==='Raid Leader' ? 'badge-rl' : 'badge-ml'));
   return `<span class="${cls}"${ml?' style="margin-left:4px"':''}>${c}</span>`;
 }
-function classNames(){ return (state.settings.classes||[]).map(c=>c.name); }
+/* ============================================================
+   LAS 21 CLASES DE CONQUEST OF AZEROTH (catálogo interno)
+   Formato: "Clase": [color, ...specs]
+   Se usa cuando Ajustes no tiene specs cargadas, para que la app
+   funcione sin depender de la base de datos.
+   ============================================================ */
+const COA = {
+  "Barbarian":        ["#C87941","Brutality","Headhunting"],
+  "Witch Doctor":     ["#E040C8","Brewing","Voodoo"],
+  "Felsworn":         ["#8FE028","Slaying","Infernal","Tyrant"],
+  "Witch Hunter":     ["#8B6FE0","Boltslinger","Inquisition","Darkness","Black Knight"],
+  "Stormbringer":     ["#3FA8F0","Lightning","Thunder"],
+  "Knight of Xoroth": ["#E63030","War","Hellfire","Defiance"],
+  "Guardian":         ["#C8C8C8","Gladiator","Vanguard"],
+  "Templar":          ["#F0D040","Crusader","Martial","Discipline"],
+  "Bloodmage":        ["#D83838","Ferocity","Blood","Packleader","Fleshweaver"],
+  "Ranger":           ["#A8D840","Archery","Brigand"],
+  "Chronomancer":     ["#E8C840","Duality","Artificer"],
+  "Necromancer":      ["#40D8A0","Death","Animation","Rime"],
+  "Pyromancer":       ["#F07830","Incineration","Draconic","Phoenix"],
+  "Cultist":          ["#A040E0","Godblade","Corruption","Influence","Dreadnought"],
+  "Starcaller":       ["#48C8F0","Warden","Sentinel","Moon Priest","Moon Guard"],
+  "Sun Cleric":       ["#F0A030","Piety","Seraphim","Blessings","Valkyrie"],
+  "Tinker":           ["#D8D8D8","Demolition","Mechanics"],
+  "Venomancer":       ["#78D830","Rot","Vizier","Stalking","Fortitude"],
+  "Reaper":           ["#48C8B0","Harvest","Soul","Domination"],
+  "Primalist":        ["#F0A878","Geomancy","Mountain King","Wildwalker","Life"],
+  "Runemaster":       ["#40D0E8","Spellslinger","Riftblade","Conjuration"]
+};
+function coaSpecs(cls){ const c=COA[cls]; return c ? c.slice(1) : []; }
+function coaColor(cls){ const c=COA[cls]; return c ? c[0] : null; }
+
+// Si Ajustes tiene clases, mandan esas. Si no, el catálogo de arriba.
+function classNames(){
+  const l=(state.settings.classes||[]).map(c=>c.name).filter(Boolean);
+  return l.length ? l : Object.keys(COA);
+}
 function classObj(cls){ return (state.settings.classes||[]).find(x=>x.name===cls) || null; }
-// Las specs pueden ser texto ("Fuego") u objeto ({name,icon}); admitimos ambas
-function specsOf(cls){ const c=classObj(cls); if(!c) return [];
-  return (c.specs||[]).map(sp=> typeof sp==='string' ? sp : sp.name); }
+// Las specs pueden ser texto ("Fuego") u objeto ({name,icon}); admitimos ambas.
+// Si la clase no tiene specs guardadas, se usan las de Conquest of Azeroth.
+function specsOf(cls){
+  const c=classObj(cls);
+  const propias = c ? (c.specs||[]).map(sp=> typeof sp==='string' ? sp : (sp&&sp.name)).filter(Boolean) : [];
+  return propias.length ? propias : coaSpecs(cls);
+}
 function specObj(cls,spec){ const c=classObj(cls); if(!c) return null;
   return (c.specs||[]).map(sp=> typeof sp==='string'?{name:sp,icon:null}:sp).find(x=>x.name===spec) || null; }
 function classIcon(cls){ const c=classObj(cls); return c && c.icon ? c.icon : null; }
-function classColor(cls){ const c=classObj(cls); return c && c.color ? c.color : null; }
+function classColor(cls){ const c=classObj(cls); return (c && c.color) ? c.color : coaColor(cls); }
 // Nombre de la clase con su color, como en el juego
 function classNameHTML(cls,spec){
   if(!cls) return '<span class="muted">Sin clase</span>';
@@ -487,14 +561,16 @@ async function ensureProfile(user){
   CAN_LOOT = !!(me.is_admin || me.is_officer || me.is_looter);
 }
 async function loadAll(){
-  const [set, profs, evs, sus, dkp, auc, bid] = await Promise.all([
+  const [set, profs, evs, sus, dkp, auc, bid, ros, rmem] = await Promise.all([
     sb.from('settings').select('*').eq('id',1).maybeSingle(),
     sb.from('profiles').select('*').order('display_name'),
     sb.from('events').select('*'),
     sb.from('signups').select('*'),
     sb.from('dkp_log').select('*'),
     sb.from('auctions').select('*'),
-    sb.from('bids').select('*')
+    sb.from('bids').select('*'),
+    sb.from('rosters').select('*').order('sort'),
+    sb.from('roster_members').select('*')
   ]);
   if(set.data) state.settings = { ...state.settings, ...set.data, classes:set.data.classes||[], roles:set.data.roles||[], ranks:set.data.ranks||[] };
   state.profiles = profs.data||[];
@@ -503,6 +579,8 @@ async function loadAll(){
   state.dkpLog = dkp.data||[];
   state.auctions = auc.data||[];
   state.bids = bid.data||[];
+  state.rosters = ros.data||[];
+  state.rmembers = rmem.data||[];
 }
 async function refetch(what){
   if(what==='profiles') state.profiles=(await sb.from('profiles').select('*').order('display_name')).data||[];
@@ -511,6 +589,8 @@ async function refetch(what){
   if(what==='dkp_log')  state.dkpLog=(await sb.from('dkp_log').select('*')).data||[];
   if(what==='auctions') state.auctions=(await sb.from('auctions').select('*')).data||[];
   if(what==='bids')     state.bids=(await sb.from('bids').select('*')).data||[];
+  if(what==='rosters')  state.rosters=(await sb.from('rosters').select('*').order('sort')).data||[];
+  if(what==='rmembers') state.rmembers=(await sb.from('roster_members').select('*')).data||[];
   if(what==='settings'){ const {data}=await sb.from('settings').select('*').eq('id',1).maybeSingle(); if(data) state.settings={...state.settings,...data,classes:data.classes||[],roles:data.roles||[],ranks:data.ranks||[]}; }
   if(MODAL.type==='eventDetail' && (what==='signups'||what==='events')) eventDetailModal(MODAL.eventId);
   else if(MODAL.type==='auctionBids' && (what==='bids'||what==='auctions')) auctionBidsModal(MODAL.eventId);
@@ -527,6 +607,8 @@ function subscribeRealtime(){
       .on('postgres_changes',{event:'*',schema:'public',table:'dkp_log'},()=>refetch('dkp_log'))
       .on('postgres_changes',{event:'*',schema:'public',table:'auctions'},()=>refetch('auctions'))
       .on('postgres_changes',{event:'*',schema:'public',table:'bids'},()=>refetch('bids'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'rosters'},()=>refetch('rosters'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'roster_members'},()=>refetch('rmembers'))
       .subscribe();
   }catch(err){
     // El tiempo real es un extra: si falla, la app sigue funcionando (con recarga manual)
@@ -567,10 +649,12 @@ function renderSetup(){
   </div></div>`;
 }
 
+if(typeof state!=='undefined'){ state.rosters=state.rosters||[]; state.rmembers=state.rmembers||[]; }
 function tabsFor(){
   const base=[
     {id:'panel',label:'Panel',icon:'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'},
-    {id:'roster',label:'Roster',icon:'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m8-3.13a4 4 0 10-6 0M12 7a4 4 0 100 .01'},
+    {id:'roster',label:'Gremio',icon:'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m8-3.13a4 4 0 10-6 0M12 7a4 4 0 100 .01'},
+    {id:'rosters',label:'Rosters',icon:'M4 5h16M4 12h16M4 19h16M8 5v14'},
     {id:'raids',label:'Calendario',icon:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
     {id:'subastas',label:'Subastas',icon:'M14 13l-7 7M3 21h8M13 6l5 5M9.5 6.5l8 8 3-3-8-8zM6 10l5 5'},
   ];
@@ -610,6 +694,7 @@ function bodyFor(){
   const v=state.ui.view;
   if(v==='panel') return viewPanel();
   if(v==='roster') return viewRoster();
+  if(v==='rosters') return viewRosters();
   if(v==='raids') return viewRaids();
   if(v==='subastas') return viewSubastas();
   if(v==='equipo') return viewEquipo(state.ui.gearUser || ME.id);
@@ -728,6 +813,153 @@ function viewRoster(){
     <div class="note" style="margin-top:14px">Cada jugador aparece aquí al entrar con Discord y edita su propia ficha. ${IS_ADMIN?'Como admin puedes editar o expulsar a cualquiera.':''}</div>
   </div>`;
 }
+
+/* ============================================================
+   ROSTERS CERRADOS (equipos) + solicitudes de entrada
+   ============================================================ */
+function rosterById(id){ return (state.rosters||[]).find(r=>r.id===id); }
+function membersOf(rid){ return (state.rmembers||[]).filter(m=>m.roster_id===rid && m.status==='member'); }
+function pendingOf(rid){ return (state.rmembers||[]).filter(m=>m.roster_id===rid && m.status==='pending'); }
+function myState(rid){ const m=(state.rmembers||[]).find(x=>x.roster_id===rid && x.user_id===ME.id); return m?m.status:null; }
+
+function viewRosters(){
+  const rosters = state.rosters||[];
+  return `<div class="view">
+    <div class="eyebrow">Equipos del gremio</div>
+    <div class="page-head"><h2>Rosters</h2>
+      ${CAN_RAID?`<button class="btn gold" data-new-roster>${ic('M12 5v14M5 12h14')} Nuevo roster</button>`:''}</div>
+    ${rosters.length? rosters.map(rosterCard).join('') :
+      `<div class="panel"><div class="panel-b"><p class="muted" style="margin:0">Aún no hay rosters. ${CAN_RAID?'Crea el primero con el botón de arriba.':'La dirección los creará pronto.'}</p></div></div>`}
+  </div>`;
+}
+
+function rosterCard(r){
+  const gente = membersOf(r.id);
+  const pend  = pendingOf(r.id);
+  const mine  = myState(r.id);
+  const col   = r.color || 'var(--gold)';
+  const puedoPedir = !mine;
+  return `<div class="panel" style="border-left:3px solid ${esc(col)}">
+    <div class="panel-h" style="align-items:center">
+      <div style="flex:1;min-width:0">
+        <h3 style="color:${esc(col)}">${esc(r.name)}</h3>
+        ${r.descr?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(r.descr)}</div>`:''}
+      </div>
+      <span class="chip">${gente.length} miembro${gente.length===1?'':'s'}</span>
+      ${CAN_RAID?`<button class="icon-btn" data-edit-roster="${r.id}" title="Editar">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')}</button>`:''}
+    </div>
+    <div class="panel-b">
+      ${gente.length? `<div class="chip-people">${gente.map(m=>{
+        const p=profileById(m.user_id); if(!p) return '';
+        return `<span class="person-chip">${classIconHTML(p.char_class,p.spec)}${esc(p.display_name)}
+          ${CAN_RAID?`<button data-kick="${r.id}:${p.id}" title="Quitar del roster">×</button>`:''}</span>`;
+      }).join('')}</div>` : '<p class="muted" style="margin:2px 0 12px;font-size:13px">Roster vacío.</p>'}
+
+      ${CAN_RAID && pend.length? `<div style="margin-top:12px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-weight:700;margin-bottom:8px">Solicitudes (${pend.length})</div>
+        ${pend.map(m=>{ const p=profileById(m.user_id); if(!p) return '';
+          return `<div class="row" style="padding:6px 0">
+            <div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:12px">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
+            <div class="grow"><div class="name" style="font-size:14px">${classIconHTML(p.char_class,p.spec)}${esc(p.display_name)}</div>
+              <div class="sub-line"><span class="chip">${classNameHTML(p.char_class,p.spec)}</span>${p.role?`<span class="chip ${roleClass(p.role)}"><span class="dot"></span>${esc(p.role)}</span>`:''}</div></div>
+            <button class="btn sm gold" data-approve="${r.id}:${p.id}">${ic('M5 13l4 4L19 7')} Aceptar</button>
+            <button class="btn sm ghost" data-reject="${r.id}:${p.id}">Rechazar</button>
+          </div>`;
+        }).join('')}
+      </div>`:''}
+
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        ${CAN_RAID?`<button class="btn sm" data-add-to-roster="${r.id}">${ic('M12 5v14M5 12h14')} Añadir miembro</button>`:''}
+        ${mine==='member'?`<span class="chip role-sanador"><span class="dot"></span>Estás en este roster</span>
+           <button class="btn sm ghost" data-leave="${r.id}">Salir</button>`:''}
+        ${mine==='pending'?`<span class="chip">Solicitud enviada · a la espera</span>
+           <button class="btn sm ghost" data-leave="${r.id}">Cancelar solicitud</button>`:''}
+        ${puedoPedir?`<button class="btn sm gold" data-request="${r.id}">${ic('M12 5v14M5 12h14')} Solicitar entrada</button>`:''}
+      </div>
+    </div></div>`;
+}
+
+/* --- crear / editar roster --- */
+function rosterModal(id){
+  const r = rosterById(id) || {name:'',descr:'',color:'#e7c877'};
+  const edit = !!(r && r.id);
+  openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar roster':'Nuevo roster'}</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Nombre</label><input id="rName" value="${esc(r.name||'')}" placeholder="p.ej. Roster Raid 1"></div>
+      <div class="field"><label>Descripción <span class="lock">(opcional)</span></label><input id="rDescr" value="${esc(r.descr||'')}" placeholder="Equipo principal de raid"></div>
+      <div class="field"><label>Color</label><input id="rColor" type="color" value="${esc(r.color||'#e7c877')}" style="width:52px;height:36px;padding:2px;background:var(--stone-2);border:1px solid var(--line-2);border-radius:7px;cursor:pointer"></div>
+    </div>
+    <div class="modal-f">
+      ${edit?`<button class="btn danger" data-del-roster="${r.id}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Eliminar</button>`:''}
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn gold" data-save-roster="${edit?r.id:''}">${ic('M5 13l4 4L19 7')} Guardar</button>
+    </div></div>`,'form');
+}
+async function saveRoster(id){
+  const name=($mroot.querySelector('#rName').value||'').trim();
+  if(!name){ toast('Ponle nombre al roster'); return; }
+  const row={ name, descr:($mroot.querySelector('#rDescr').value||'').trim()||null, color:$mroot.querySelector('#rColor').value||null };
+  const q = id ? sb.from('rosters').update(row).eq('id',id) : sb.from('rosters').insert(row);
+  const { error } = await q;
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('rosters'); toast(id?'Roster actualizado':'Roster creado');
+}
+async function delRoster(id){
+  if(!confirm('¿Eliminar este roster? Se quitan todos sus miembros (no expulsa a nadie del gremio).')) return;
+  const { error } = await sb.from('rosters').delete().eq('id',id);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await Promise.all([refetch('rosters'),refetch('rmembers')]); toast('Roster eliminado');
+}
+
+/* --- pedir entrada / salir / gestionar --- */
+async function requestRoster(rid){
+  const { error } = await sb.from('roster_members').insert({roster_id:rid,user_id:ME.id,status:'pending'});
+  if(error){ toast(error.message,true); return; }
+  await refetch('rmembers'); toast('Solicitud enviada');
+}
+async function leaveRoster(rid){
+  const { error } = await sb.from('roster_members').delete().eq('roster_id',rid).eq('user_id',ME.id);
+  if(error){ toast(error.message,true); return; }
+  await refetch('rmembers'); toast('Hecho');
+}
+async function approveMember(rid,uid){
+  const { error } = await sb.from('roster_members').update({status:'member'}).eq('roster_id',rid).eq('user_id',uid);
+  if(error){ toast(error.message,true); return; }
+  await refetch('rmembers'); toast('Aceptado en el roster');
+}
+async function removeMember(rid,uid){
+  const { error } = await sb.from('roster_members').delete().eq('roster_id',rid).eq('user_id',uid);
+  if(error){ toast(error.message,true); return; }
+  await refetch('rmembers'); toast('Hecho');
+}
+async function addMemberDirect(rid,uid){
+  const existe=(state.rmembers||[]).find(m=>m.roster_id===rid&&m.user_id===uid);
+  if(existe){ // si ya estaba pendiente, lo pasamos a miembro
+    await sb.from('roster_members').update({status:'member'}).eq('roster_id',rid).eq('user_id',uid);
+  } else {
+    const { error } = await sb.from('roster_members').insert({roster_id:rid,user_id:uid,status:'member'});
+    if(error){ toast(error.message,true); return; }
+  }
+  await refetch('rmembers'); render(); toast('Miembro añadido');
+}
+function addToRosterModal(rid){
+  const r=rosterById(rid); if(!r) return;
+  const yaEstan=new Set(membersOf(rid).map(m=>m.user_id));
+  const libres=(state.profiles||[]).filter(p=>!yaEstan.has(p.id));
+  openModal(`<div class="modal"><div class="modal-h"><h3>Añadir a ${esc(r.name)}</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b" style="max-height:60vh;overflow:auto">
+      ${libres.length? libres.map(p=>`<div class="row" style="cursor:pointer" data-pick-member="${rid}:${p.id}">
+        <div class="avatar" style="width:32px;height:32px;flex-basis:32px;font-size:13px">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
+        <div class="grow"><div class="name" style="font-size:14px">${classIconHTML(p.char_class,p.spec)}${esc(p.display_name)}</div>
+          <div class="sub-line"><span class="chip">${classNameHTML(p.char_class,p.spec)}</span>${p.role?`<span class="chip ${roleClass(p.role)}"><span class="dot"></span>${esc(p.role)}</span>`:''}</div></div>
+        <span class="btn sm gold">${ic('M12 5v14M5 12h14')}</span>
+      </div>`).join('') : '<p class="muted" style="margin:0">Todos los guerreros ya están en este roster.</p>'}
+    </div>
+    <div class="modal-f"><button class="btn ghost" data-close>Cerrar</button></div></div>`,'form');
+}
+
 function rosterRow(p){
   const mine = p.id===ME.id;
   const canEdit = mine || CAN_RAID;   // el Raid Leader gestiona el roster
@@ -996,43 +1228,46 @@ function gearCount(p){ const g=gearOf(p); return Object.keys(g).filter(k=>g[k]&&
 function slotHTML(p, key, label, editable){
   const it = gearOf(p)[key];
   const puesto = it && it.name;
-  const inner = puesto
-    ? `${iconBox(it.icon,it.q)}
-       <div class="txt"><div class="sname">${esc(label)}</div>
-         <div class="iname ${qClass(it.q)}">${it.id?`<a class="item-link ${qClass(it.q)}" href="${itemUrl(it.id)}" target="_blank" rel="noopener item=${it.id}" onclick="event.stopPropagation()">${esc(it.name)}</a>`:esc(it.name)}</div></div>`
-    : `${iconBox(null,null)}
-       <div class="txt"><div class="sname">${esc(label)}</div><div class="vacio">Vacío</div></div>`;
-  return `<div class="slot ${editable?'':'ro'}" ${editable?`data-slot="${key}" data-slot-user="${p.id}"`:''}>${inner}</div>`;
+  const q = puesto ? qClass(it.q) : '';
+  const borde = (puesto && it.q!=null && it.q!=='') ? ` qb${+it.q}` : '';
+  const dentro = puesto
+    ? (imgChain(it.icon,'','gimg') || `<span class="glbl">${esc(it.name.slice(0,10))}</span>`)
+    : `<span class="glbl">${esc(label)}</span>`;
+  const tip = puesto
+    ? `<span class="gtip ${q}">${esc(it.name)}</span>`
+    : `<span class="gtip muted">${esc(label)} · vacío</span>`;
+  return `<div class="gslot${borde}${editable?' edit':''}"
+    ${editable?`data-slot="${key}" data-slot-user="${p.id}"`:''}
+    title="${esc(label)}${puesto?' · '+esc(it.name):''}">${dentro}${tip}</div>`;
 }
 
 function viewEquipo(uid){
   const p = profileById(uid) || ME;
   const mine = p.id===ME.id;
-  const editable = mine || IS_ADMIN;
+  const editable = mine || CAN_RAID;
   const izq = SLOTS.slice(0,8), der = SLOTS.slice(8);
+  const total = SLOTS.length + SLOTS_ARMAS.length;
   return `<div class="view">
     <div class="eyebrow">${mine?'Tu equipo':'Equipo de '+esc(p.display_name)}</div>
     <div class="page-head"><h2>${mine?'Mi Equipo':esc(p.display_name)}</h2>
       ${!mine?`<button class="btn ghost" data-tab="roster">${ic('M15 18l-6-6 6-6')} Volver al Roster</button>`:''}</div>
     <div class="panel"><div class="panel-b">
-      <div class="gear-head">
-        <div class="avatar" style="width:44px;height:44px;flex-basis:44px;font-size:16px">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-family:'Cinzel';font-size:18px;color:var(--gold-bright)">${esc(p.display_name)}</div>
-          <div class="sub-line">
-            ${razaHTML(p)}
+      <div class="doll">
+        <div class="doll-col">${izq.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
+        <div class="doll-center">
+          <div class="doll-portrait">${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="">`:initials(p.display_name)}</div>
+          <div class="doll-name">${esc(p.display_name)}</div>
+          <div class="doll-sub">
+            ${p.race?`<span class="chip">${razaIconHTML(p.race,p.gender)}${esc(p.race)}</span>`:''}
             <span class="chip">${classIconHTML(p.char_class,p.spec)}${classNameHTML(p.char_class,p.spec)}</span>
             ${p.role?`<span class="chip ${roleClass(p.role)}"><span class="dot"></span>${esc(p.role)}</span>`:''}
           </div>
+          <div class="doll-count">${gearCount(p)} / ${total} piezas</div>
         </div>
-        <span class="muted" style="font-size:12.5px">${gearCount(p)} / ${SLOTS.length+SLOTS_ARMAS.length} piezas</span>
-      </div>
-      ${editable?'<div class="note" style="margin-bottom:14px">Pulsa en una ranura para poner o cambiar la pieza. Copia el enlace del objeto desde <b>db.ascension.gg</b>.</div>':''}
-      <div class="doll">
-        <div class="doll-col">${izq.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
         <div class="doll-col">${der.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
       </div>
       <div class="doll-weapons">${SLOTS_ARMAS.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
+      ${editable?'<div class="note" style="margin-top:14px">Pulsa una ranura para poner o cambiar la pieza. Copia el enlace del objeto desde <b>db.ascension.gg</b>.</div>':''}
     </div></div>
   </div>`;
 }
@@ -1500,6 +1735,18 @@ document.addEventListener('click',e=>{
   const oe=t.closest('[data-open-event]'); if(oe){ eventDetailModal(oe.dataset.openEvent); return; }
   const day=t.closest('[data-day]'); if(day && CAN_RAID && !t.closest('[data-open-event]')){ eventModal({type:'Raid',title:'',date:day.dataset.day,time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''}); return; }
   const em=t.closest('[data-edit-member]'); if(em){ memberModal(em.dataset.editMember); return; }
+  // --- Rosters ---
+  if(t.closest('[data-new-roster]')){ rosterModal(); return; }
+  const er=t.closest('[data-edit-roster]'); if(er){ rosterModal(er.dataset.editRoster); return; }
+  const sr=t.closest('[data-save-roster]'); if(sr){ saveRoster(sr.dataset.saveRoster||null); return; }
+  const dr=t.closest('[data-del-roster]'); if(dr){ delRoster(dr.dataset.delRoster); return; }
+  const rq=t.closest('[data-request]'); if(rq){ requestRoster(rq.dataset.request); return; }
+  const lv=t.closest('[data-leave]'); if(lv){ leaveRoster(lv.dataset.leave); return; }
+  const ap=t.closest('[data-approve]'); if(ap){ const [ri,ui]=ap.dataset.approve.split(':'); approveMember(ri,ui); return; }
+  const rj=t.closest('[data-reject]'); if(rj){ const [ri,ui]=rj.dataset.reject.split(':'); removeMember(ri,ui); return; }
+  const kk=t.closest('[data-kick]'); if(kk){ const [ri,ui]=kk.dataset.kick.split(':'); removeMember(ri,ui); return; }
+  const atr=t.closest('[data-add-to-roster]'); if(atr){ addToRosterModal(atr.dataset.addToRoster); return; }
+  const pm=t.closest('[data-pick-member]'); if(pm){ const [ri,ui]=pm.dataset.pickMember.split(':'); addMemberDirect(ri,ui); return; }
   const ee=t.closest('[data-edit-event]'); if(ee){ eventModal(state.events.find(x=>x.id===ee.dataset.editEvent)); return; }
   const sm=t.closest('[data-save-member]'); if(sm){ saveMember(sm.dataset.saveMember); return; }
   const dm=t.closest('[data-del-member]'); if(dm){ delMember(dm.dataset.delMember); return; }
