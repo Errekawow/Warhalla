@@ -1036,7 +1036,7 @@ function reserveModal(id){
           <input id="rIcon" value="${esc(r.item_icon||'')}" placeholder="inv_bow_07"></div>
         <div class="field"><label>Calidad</label>
           <select id="rQ"><option value="">— Sin definir —</option>
-            ${QUALITIES.map(([v,n])=>`<option value="${v}" ${String(r.item_quality)===String(v)?'selected':''}>${n}</option>`).join('')}
+            ${QUALITIES.filter(([v])=>v!==5).map(([v,n])=>`<option value="${v}" ${String(r.item_quality)===String(v)?'selected':''}>${n}</option>`).join('')}
           </select></div>
       </div>
       <div class="note" style="margin-bottom:14px">Pega el enlace y el objeto se verá <b>con su icono y color</b>, y podrás abrir su ficha.</div>
@@ -1754,7 +1754,6 @@ function memberModal(id){
   if(cs) cs.addEventListener('change',()=>{ ss.innerHTML=optionListVacia(specsOf(cs.value),'','Elige spec'); });
   const seg=$mroot.querySelector('#mAdmin'); if(seg) seg.addEventListener('click',e=>{const o=e.target.closest('[data-adm]');if(!o)return;seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
   const gen=$mroot.querySelector('#mGen'); if(gen) gen.addEventListener('click',e=>{const o=e.target.closest('[data-gen]');if(!o)return;gen.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
-  const rp=$mroot.querySelector('#rPrio'); if(rp) rp.addEventListener('click',e=>{const o=e.target.closest('[data-prio]');if(!o)return;rp.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
 }
 async function saveMember(id){
   const name=($mroot.querySelector('#mName').value||'').trim(); if(!name){ toast('Ponle nombre'); return; }
@@ -2117,6 +2116,8 @@ document.addEventListener('click',e=>{
   const tp=t.closest('[data-tier-pick]'); if(tp){ const [ri,ui]=tp.dataset.tierPick.split(':'); tierModal(ri,ui); return; }
   const pinfo=t.closest('[data-person-info]'); if(pinfo){ personInfoModal(pinfo.dataset.personInfo); return; }
   // --- Reservas de botín ---
+  const prioBtn=t.closest('[data-prio]');
+  if(prioBtn){ const seg=prioBtn.closest('#rPrio'); if(seg){ seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel')); prioBtn.classList.add('sel'); return; } }
   if(t.closest('[data-new-reserve]')){ reserveModal(); return; }
   const er2=t.closest('[data-edit-reserve]'); if(er2){ reserveModal(er2.dataset.editReserve); return; }
   const sr2=t.closest('[data-save-reserve]'); if(sr2){ saveReserve(sr2.dataset.saveReserve||null); return; }
