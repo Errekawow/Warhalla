@@ -1460,7 +1460,7 @@ function viewSubastas(){
     <div class="eyebrow">Botín · subasta a sobre cerrado</div>
     <div class="page-head"><h2>Subastas de botín</h2>
       ${CAN_LOOT?`<button class="btn gold" data-act="new-auction">${ic('M12 5v14M5 12h14')} Nueva subasta</button>`:''}</div>
-    <div class="note" style="margin-bottom:16px">Tu puja es <b>secreta</b>: nadie más ve cuánto ofreces, ni siquiera tu DKP. Gana la puja más alta cuando la dirección adjudique el objeto.</div>
+    <div class="note" style="margin-bottom:16px">Cada objeto se reparte por <b>subasta</b> (gana la puja más alta, y tu puja es secreta) o por <b>precio fijo</b> (te apuntas y la dirección elige a quién dárselo). El DKP se descuenta al adjudicar.</div>
     <div class="panel"><div class="panel-h"><h3><span class="rune">ᚷ</span> Abiertas</h3></div>
       <div class="panel-b" style="padding:6px 8px">
         ${open.length? `<div class="rows">${open.map(auctionRow).join('')}</div>` : `<div class="empty"><div class="rune">ᚷ</div><p>No hay subastas abiertas ahora mismo.</p></div>`}
@@ -1471,23 +1471,32 @@ function viewSubastas(){
 }
 function auctionRow(a){
   const open=a.status==='open';
-  const mine=myBid(a.id);
+  const fixed=a.mode==='fixed';
+  const mine=myBid(a.id);              // en precio fijo, mine != null = estoy apuntado
+  const apuntado=mine!=null;
   const winner=a.winner_id?profileById(a.winner_id):null;
+  const nInteresados=bidsFor(a.id).length;
   let right;
   if(open){
-    // Todos (incluido el admin) pueden pujar. El admin, además, ve las pujas.
-    const btnPujar = `<button class="btn sm ${mine!=null?'':'gold'}" data-bid="${a.id}">${ic('M14 13l-7 7M13 6l5 5M9.5 6.5l8 8 3-3-8-8z')} ${mine!=null?'Cambiar puja':'Pujar'}</button>`;
-    const btnPujas = CAN_LOOT ? `<button class="btn sm" data-view-bids="${a.id}">${ic('M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z')} ${bidsFor(a.id).length} puja(s)</button>` : '';
-    right = `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btnPujar}${btnPujas}</div>`;
+    let btn;
+    if(fixed){
+      btn = `<button class="btn sm ${apuntado?'':'gold'}" data-fixed-join="${a.id}">${apuntado?ic('M5 13l4 4L19 7'):ic('M12 5v14M5 12h14')} ${apuntado?'Apuntado':'Me interesa'}</button>`;
+    } else {
+      btn = `<button class="btn sm ${apuntado?'':'gold'}" data-bid="${a.id}">${ic('M14 13l-7 7M13 6l5 5M9.5 6.5l8 8 3-3-8-8z')} ${apuntado?'Cambiar puja':'Pujar'}</button>`;
+    }
+    const btnList = CAN_LOOT ? `<button class="btn sm" data-view-bids="${a.id}">${ic('M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z')} ${nInteresados} ${fixed?'interesado(s)':'puja(s)'}</button>` : '';
+    right = `<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${btn}${btnList}</div>`;
   } else {
-    right=`<span class="chip role-sanador">${winner?'Ganada por '+esc(winner.display_name):'Cerrada'}</span>`;
+    right=`<span class="chip role-sanador">${winner?'Para '+esc(winner.display_name):'Cerrada'}</span>`;
   }
   return `<div class="row">
     ${a.item_icon?iconBox(a.item_icon,a.item_quality):`<div class="avatar" style="width:34px;${open?'':'opacity:.7'}">⚔</div>`}
     <div class="grow"><div class="name">${itemHTML(a)}</div>
       <div class="sub-line">
-        ${a.min_bid?`<span class="chip">Mínimo ${a.min_bid}</span>`:''}
-        ${!open?'':(mine!=null?`<span class="chip role-tanque">Tu puja: ${mine}</span>`:'<span class="chip">Sin pujar</span>')}
+        <span class="chip ${fixed?'role-support':''}">${fixed?`Precio fijo: ${a.price||0}`:(a.min_bid?`Mínimo ${a.min_bid}`:'Subasta')}</span>
+        ${!open?'':(fixed
+            ? (apuntado?'<span class="chip role-tanque">Te has apuntado</span>':'<span class="chip">Sin apuntar</span>')
+            : (apuntado?`<span class="chip role-tanque">Tu puja: ${mine}</span>`:'<span class="chip">Sin pujar</span>'))}
         ${a.notes?`<span class="muted" style="font-size:11.5px">${esc(a.notes)}</span>`:''}
       </div></div>
     ${right}
@@ -1927,10 +1936,16 @@ async function doSpend(){
 /* --- Subastas: crear (admin) --- */
 function auctionModal(a){
   const edit = !!(a && a.id);
-  a = a || {item:'',notes:'',min_bid:0,event_id:null};
+  a = a || {item:'',notes:'',min_bid:0,price:0,mode:'bid',event_id:null};
+  const fixed = a.mode==='fixed';
   const evs=upcoming();
-  openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar subasta':'Nueva subasta'}</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+  openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar objeto':'Nuevo objeto de botín'}</h3><button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
+      <div class="field"><label>Forma de reparto</label>
+        <div class="seg" id="aMode">
+          <div class="opt ${!fixed?'sel':''}" data-mode="bid">Subasta (puja más alta)</div>
+          <div class="opt ${fixed?'sel':''}" data-mode="fixed">Precio fijo</div>
+        </div></div>
       <div class="field"><label>Objeto de botín</label><input id="aItem" value="${esc(a.item)}" placeholder="p.ej. Arco del Lobo Invernal"></div>
       <div class="field"><label>Enlace o ID <span class="lock">(db.ascension.gg)</span></label>
         <input id="aItemId" value="${a.item_id||''}" placeholder="Pega el enlace del objeto o solo el número"></div>
@@ -1943,28 +1958,35 @@ function auctionModal(a){
           </select></div>
       </div>
       <div class="note" style="margin-bottom:14px">Rellenando esto, el gremio verá el objeto <b>con su icono y color</b>, y podrá abrir su ficha con las estadísticas.</div>
-      <div class="field"><label>Puja mínima (DKP)</label><input id="aMin" type="number" min="0" value="${a.min_bid||0}"></div>
+      <div class="field" id="aMinWrap" style="${fixed?'display:none':''}"><label>Puja mínima (DKP)</label><input id="aMin" type="number" min="0" value="${a.min_bid||0}"></div>
+      <div class="field" id="aPriceWrap" style="${fixed?'':'display:none'}"><label>Precio fijo (DKP)</label><input id="aPrice" type="number" min="0" value="${a.price||0}">
+        <div class="note" style="margin-top:8px">Los interesados se apuntan a este precio y tú eliges a quién dárselo. Se descuenta el precio fijo al adjudicar.</div></div>
       <div class="field"><label>Raid asociado (opcional)</label><select id="aEvent"><option value="">— Ninguno —</option>${evs.map(e=>`<option value="${e.id}" ${a.event_id===e.id?'selected':''}>${esc(e.title)} · ${fmtDate(e.date)}</option>`).join('')}</select></div>
       <div class="field" style="margin-bottom:0"><label>Notas</label><textarea id="aNotes" placeholder="Condiciones, prioridad de rol, etc.">${esc(a.notes||'')}</textarea></div>
     </div>
     <div class="modal-f">
       ${edit?`<button class="btn danger" data-del-auction="${a.id}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Eliminar</button>`:''}
       <button class="btn ghost" data-close>Cancelar</button>
-      <button class="btn gold" data-save-auction="${edit?a.id:''}">${ic('M5 13l4 4L19 7')} ${edit?'Guardar':'Abrir subasta'}</button>
+      <button class="btn gold" data-save-auction="${edit?a.id:''}">${ic('M5 13l4 4L19 7')} ${edit?'Guardar':'Publicar'}</button>
     </div></div>`,'form');
 }
 async function saveAuction(id){
   const item=($mroot.querySelector('#aItem').value||'').trim(); if(!item){ toast('Falta el objeto'); return; }
+  const mode = $mroot.querySelector('#aMode .opt.sel')?.dataset.mode || 'bid';
+  const price = Math.max(0,+($mroot.querySelector('#aPrice')?.value)||0);
+  if(mode==='fixed' && price<=0){ toast('Ponle un precio fijo en DKP'); return; }
   const row={ item, item_id: parseItemId($mroot.querySelector('#aItemId').value),
     item_icon: ($mroot.querySelector('#aIcon').value||'').trim() || null,
     item_quality: $mroot.querySelector('#aQ').value ? +$mroot.querySelector('#aQ').value : null,
-    min_bid:Math.max(0,+$mroot.querySelector('#aMin').value||0),
+    mode,
+    min_bid: mode==='bid' ? Math.max(0,+$mroot.querySelector('#aMin').value||0) : 0,
+    price: mode==='fixed' ? price : null,
     event_id:$mroot.querySelector('#aEvent').value||null, notes:($mroot.querySelector('#aNotes').value||'').trim() };
   let error;
   if(id){ ({error}=await sb.from('auctions').update(row).eq('id',id)); }
   else { ({error}=await sb.from('auctions').insert({...row,status:'open'})); }
   if(error){ toast(error.message,true); return; }
-  closeModal(); await refetch('auctions'); toast(id?'Subasta actualizada':'Subasta abierta');
+  closeModal(); await refetch('auctions'); toast(id?'Objeto actualizado':(mode==='fixed'?'Publicado a precio fijo':'Subasta abierta'));
 }
 async function delAuction(id){
   const a=auctionById(id); if(!a) return;
@@ -2010,25 +2032,49 @@ async function retireBid(aid){
   closeModal(); await refetch('bids'); toast('Puja retirada');
 }
 
+// --- Precio fijo: apuntarse / quitarse ---
+async function fixedJoin(aid){
+  const a=auctionById(aid); if(!a) return;
+  const bal=balance(ME.id); const precio=a.price||0;
+  const ya=myBid(aid)!=null;
+  if(ya){ // ya apuntado -> permitir quitarse
+    await sb.from('bids').delete().eq('auction_id',aid).eq('user_id',ME.id);
+    await refetch('bids'); toast('Te has quitado'); return;
+  }
+  if(precio>bal){ toast(`Necesitas ${precio} DKP y tienes ${bal}`,true); return; }
+  // Nos apuntamos guardando el precio fijo como "cantidad" (así el reparto lo cobra igual)
+  const { error } = await sb.from('bids').upsert({auction_id:aid,user_id:ME.id,amount:precio},{onConflict:'auction_id,user_id'});
+  if(error){ toast(error.message,true); return; }
+  await refetch('bids'); toast('Apuntado a este objeto');
+}
+
 /* --- Ver pujas y adjudicar (admin) --- */
 function auctionBidsModal(aid){
   const a=auctionById(aid); if(!a){ closeModal(); return; }
-  const bids=bidsFor(aid);
+  const fixed=a.mode==='fixed';
+  let bids=bidsFor(aid);
+  // Precio fijo: todos ofrecen lo mismo, así que ordenamos por rango (antigüedad) para ayudar a decidir
+  if(fixed) bids=[...bids].sort((x,y)=>{
+    const px=profileById(x.user_id), py=profileById(y.user_id);
+    return new Date(x.created_at||0)-new Date(y.created_at||0);
+  });
   const rows=bids.map((b,i)=>{ const p=profileById(b.user_id); return `<div class="signup-row">
-      <div class="medal ${i<3?'g'+(i+1):''}">${i+1}</div>
+      <div class="medal ${!fixed&&i<3?'g'+(i+1):''}">${i+1}</div>
       <div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:12px">${p&&p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p?p.display_name:'?')}</div>
-      <div class="grow"><div class="name" style="font-size:14px">${esc(p?p.display_name:'—')}</div>
-        <div class="sub-line"><span class="muted">DKP disponible: ${p?balance(p.id):'—'}</span></div></div>
-      <div style="display:flex;align-items:center;gap:10px"><div class="dkp-val" style="font-size:16px">${b.amount}</div>
-        ${a.status==='open'?`<button class="btn sm gold" data-adjudicate="${aid}:${b.user_id}">Adjudicar</button>`:(a.winner_id===b.user_id?'<span class="chip role-sanador">Ganador</span>':'')}</div>
+      <div class="grow"><div class="name" style="font-size:14px">${p?classIconHTML(p.char_class,p.spec):''}${esc(p?p.display_name:'—')}</div>
+        <div class="sub-line">${p&&p.role?`<span class="chip ${roleClass(p.role)}" style="padding:1px 7px">${roleSvg(p.role)}${esc(p.role)}</span>`:''}<span class="muted">DKP: ${p?balance(p.id):'—'}</span>${fixed&&p?` · <span class="muted">apuntado ${fmtDateTime(b.created_at)}</span>`:''}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">${fixed?'':`<div class="dkp-val" style="font-size:16px">${b.amount}</div>`}
+        ${a.status==='open'?`<button class="btn sm gold" data-adjudicate="${aid}:${b.user_id}">${fixed?'Dárselo':'Adjudicar'}</button>`:(a.winner_id===b.user_id?'<span class="chip role-sanador">Elegido</span>':'')}</div>
     </div>`; }).join('');
   openModal(`<div class="modal wide"><div class="modal-h">
-      <div><div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700">Subasta ${a.status==='open'?'abierta':'adjudicada'}</div>
+      <div><div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700">${fixed?'Precio fijo':'Subasta'} · ${a.status==='open'?'abierta':'cerrada'}${fixed?' · '+(a.price||0)+' DKP':''}</div>
         <h3 style="margin-top:3px">${itemHTML(a)}</h3></div>
       <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
-      <div class="note" style="margin-bottom:14px">Vista solo para la dirección. Al adjudicar, se descuenta la puja del ganador de su DKP y el objeto aparece en su cuenta.</div>
-      ${bids.length? rows : '<div class="empty muted">Nadie ha pujado todavía.</div>'}
+      <div class="note" style="margin-bottom:14px">${fixed
+        ? 'Todos pagan el mismo precio fijo ('+(a.price||0)+' DKP). Elige tú a quién dárselo (por prioridad, antigüedad, lo que decidáis). Se descuenta al dárselo.'
+        : 'Vista solo para la dirección. Al adjudicar, se descuenta la puja del ganador de su DKP y el objeto aparece en su cuenta.'}</div>
+      ${bids.length? rows : `<div class="empty muted">Nadie se ha ${fixed?'apuntado':'pujado'} todavía.</div>`}
     </div>
     <div class="modal-f">
       ${a.status==='open'&&CAN_LOOT?`<button class="btn ghost" data-edit-auction="${aid}">Editar</button>`:''}
@@ -2040,7 +2086,8 @@ async function adjudicate(aid,winnerId){
   const a=auctionById(aid); if(!a||a.status!=='open') return;
   const b=state.bids.find(x=>x.auction_id===aid && x.user_id===winnerId); if(!b) return;
   const p=profileById(winnerId);
-  if(!confirm(`¿Adjudicar "${a.item}" a ${p?p.display_name:'este guerrero'} por ${b.amount} DKP?`)) return;
+  const verbo = a.mode==='fixed' ? 'Dar' : 'Adjudicar';
+  if(!confirm(`¿${verbo} "${a.item}" a ${p?p.display_name:'este guerrero'} por ${b.amount} DKP?`)) return;
   // La adjudicación la hace el servidor: cobra la puja y cierra la subasta.
   const { data, error } = await sb.rpc('award_auction', { p_auction: aid, p_winner: winnerId });
   if(error){ toast(error.message,true); return; }
@@ -2116,6 +2163,15 @@ document.addEventListener('click',e=>{
   const tp=t.closest('[data-tier-pick]'); if(tp){ const [ri,ui]=tp.dataset.tierPick.split(':'); tierModal(ri,ui); return; }
   const pinfo=t.closest('[data-person-info]'); if(pinfo){ personInfoModal(pinfo.dataset.personInfo); return; }
   // --- Reservas de botín ---
+  const modeBtn=t.closest('[data-mode]');
+  if(modeBtn){ const seg=modeBtn.closest('#aMode'); if(seg){
+    seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel')); modeBtn.classList.add('sel');
+    const fixed=modeBtn.dataset.mode==='fixed';
+    const mw=$mroot.querySelector('#aMinWrap'), pw=$mroot.querySelector('#aPriceWrap');
+    if(mw) mw.style.display=fixed?'none':''; if(pw) pw.style.display=fixed?'':'none';
+    return;
+  } }
+  const fj=t.closest('[data-fixed-join]'); if(fj){ fixedJoin(fj.dataset.fixedJoin); return; }
   const prioBtn=t.closest('[data-prio]');
   if(prioBtn){ const seg=prioBtn.closest('#rPrio'); if(seg){ seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel')); prioBtn.classList.add('sel'); return; } }
   if(t.closest('[data-new-reserve]')){ reserveModal(); return; }
