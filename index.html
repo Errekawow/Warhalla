@@ -180,7 +180,12 @@
   .person-chip.clickable{cursor:pointer;transition:.12s}
   .person-chip.clickable:hover{border-color:var(--gold-dim);background:var(--stone-3)}
   .person-chip.is-me{border-color:var(--gold-dim)}
-  .person-chip .rdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:2px;background:currentColor;opacity:.85}
+  .person-chip .pc-name{font-weight:500}
+  .person-chip .role-svg{width:15px;height:15px;flex:0 0 15px;margin-left:1px}
+  .role-svg.role-tank{color:#7fb0e0}
+  .role-svg.role-heal{color:#8fd07a}
+  .role-svg.role-dps{color:#e0925f}
+  .role-svg.role-support{color:#b9a3e8}
   /* Bloques de plantilla / reserva / resto */
   .tier-block{margin-bottom:14px;padding:10px 12px;border-radius:10px;background:var(--stone-2);border:1px solid var(--line)}
   .tier-block.tier-starter{border-color:rgba(231,200,119,.35);background:rgba(231,200,119,.05)}
@@ -355,6 +360,38 @@ function roleClass(role){ const x=(role||'').toLowerCase();
   if(x.startsWith('san')||x.startsWith('heal')||x.startsWith('cura'))return'role-sanador';
   if(x.startsWith('sup'))return'role-support';
   return'role-dps'; }
+// Icono según el rol: escudo (tanque), espadas (dps), cruz (sanador), estrella (support)
+function roleKind(role){ const x=(role||'').toLowerCase();
+  if(x.startsWith('tan'))return'tank';
+  if(x.startsWith('san')||x.startsWith('heal')||x.startsWith('cura'))return'heal';
+  if(x.startsWith('sup'))return'support';
+  return'dps'; }
+function roleSvg(role){
+  const k=roleKind(role);
+  // Todos rellenos y de trazo simple para que se lean bien a tamaño pequeño
+  const paths={
+    tank:'<path d="M12 2l7 2.5v6.2c0 4.6-3 7.8-7 9.3-4-1.5-7-4.7-7-9.3V4.5z" fill="currentColor" stroke="none"/>',
+    heal:'<path d="M9.5 3h5v5.5H20v5h-5.5V19h-5v-5.5H4v-5h5.5z" fill="currentColor" stroke="none"/>',
+    dps:'<path d="M13.5 3l2 2-6.5 6.5 1.2 1.2-1.4 1.4-1.2-1.2-1.3 1.3 2.5 2.5-1.4 1.4-1.2-1.2-2 2-1.4-1.4 2-2-1.2-1.2 1.4-1.4 2.5 2.5z" fill="currentColor" stroke="none"/>',
+    support:'<path d="M12 2.8 L14.23 8.93 L20.75 9.16 L15.61 13.17 L17.41 19.44 L12 15.8 L6.59 19.44 L8.39 13.17 L3.25 9.16 L9.77 8.93 Z" fill="currentColor" stroke="none"/>'
+  };
+  return `<svg class="role-svg role-${k}" viewBox="0 0 24 24" fill="currentColor" stroke="none">${paths[k]}</svg>`;
+}
+// Ficha de miembro con icono de rol y tooltip (clase · spec · rol)
+function personChip(p, opts){
+  opts = opts||{};
+  const yo = p.id===ME.id;
+  const tip = [classDisplay(p.char_class,p.spec), p.role].filter(Boolean).join(' · ');
+  const attr = opts.pick ? `data-tier-pick="${opts.pick}"` : (opts.info ? `data-person-info="${opts.info}"` : '');
+  return `<span class="person-chip ${yo?'is-me':''} ${opts.clickable?'clickable':''}" ${attr} title="${esc(tip)}">
+    ${classIconHTML(p.char_class,p.spec)}<span class="pc-name">${esc(p.display_name)}</span>
+    ${p.role?roleSvg(p.role):''}
+  </span>`;
+}
+function classDisplay(cls,spec){
+  if(!cls) return '';
+  return spec ? cls+' · '+spec : cls;
+}
 function ic(path,cls){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${cls?`class="${cls}"`:''}><path d="${path}"/></svg>`; }
 function profileById(id){ return state.profiles.find(p=>p.id===id); }
 function balance(uid){ return state.dkpLog.filter(l=>l.user_id===uid).reduce((s,l)=>s+l.amount,0); }
@@ -654,7 +691,7 @@ function subscribeRealtime(){
 }
 function signOut(){ sb.auth.signOut(); }
 
-function sigilSVG(){ return `<svg viewBox="0 0 24 24" fill="none" stroke="#e7c877" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 5 5 1-3.5 4 1 5.5L12 20l-5.5 2.5 1-5.5L4 8l5-1z"/></svg>`; }
+function sigilSVG(){ return `<svg viewBox="0 0 24 24" fill="#e7c877" stroke="none"><path d="M12 2.8 L14.23 8.93 L20.75 9.16 L15.61 13.17 L17.41 19.44 L12 15.8 L6.59 19.44 L8.39 13.17 L3.25 9.16 L9.77 8.93 Z"/></svg>`; }
 function renderLoading(){ $root.innerHTML=`<div class="gate"><div class="gate-card"><div class="sig">${sigilSVG()}</div><div class="spinner"></div><p class="muted">Abriendo las puertas del salón…</p></div></div>`; }
 function renderFatal(msg){ $root.innerHTML=`<div class="gate"><div class="gate-card"><div class="sig">${sigilSVG()}</div><h1>Walhalla</h1><p>${esc(msg)}</p><button class="btn gold block" onclick="location.reload()">Reintentar</button></div></div>`; }
 function renderLogin(){
@@ -903,12 +940,7 @@ function rosterCard(r){
       </div>
       ${lista.length? `<div class="chip-people">${lista.map(m=>{
         const p=profileById(m.user_id); if(!p) return '';
-        const yo = p.id===ME.id;
-        return `<span class="person-chip ${yo?'is-me':''} ${CAN_RAID?'clickable':''}"
-          ${CAN_RAID?`data-tier-pick="${r.id}:${p.id}"`:''}>
-          ${classIconHTML(p.char_class,p.spec)}${esc(p.display_name)}
-          ${p.role?`<i class="rdot ${roleClass(p.role)}" title="${esc(p.role)}"></i>`:''}
-        </span>`;
+        return personChip(p, { clickable:true, pick:CAN_RAID?`${r.id}:${p.id}`:null, info:!CAN_RAID?p.id:null });
       }).join('')}</div>` : `<p class="tier-empty">Nadie por ahora.</p>`}
     </div>`;
   };
@@ -962,6 +994,37 @@ function rosterCard(r){
 }
 
 /* --- mover a un guerrero entre plantilla / reserva / resto --- */
+function personInfoModal(uid){
+  const p=profileById(uid); if(!p) return;
+  const g=gearCount(p);
+  openModal(`<div class="modal"><div class="modal-h">
+      <div style="flex:1;min-width:0">
+        <div class="eyebrow" style="margin:0 0 2px">Guerrero</div>
+        <h3 style="margin:0">${esc(p.display_name)}</h3>
+      </div>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="row" style="align-items:center;gap:12px;margin-bottom:14px">
+        <div class="avatar" style="width:48px;height:48px;flex-basis:48px;font-size:18px">${p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p.display_name)}</div>
+        <div class="grow">
+          <div class="sub-line" style="flex-wrap:wrap">
+            ${p.race?razaHTML(p):''}
+            <span class="chip">${classIconHTML(p.char_class,p.spec)}${classNameHTML(p.char_class,p.spec)}</span>
+            ${p.role?`<span class="chip ${roleClass(p.role)}">${roleSvg(p.role)}${esc(p.role)}</span>`:''}
+          </div>
+        </div>
+      </div>
+      <div class="row" style="border-top:1px solid var(--line);padding-top:12px">
+        <span class="grow muted" style="font-size:13px">Equipo</span>
+        <span class="chip">⚔ ${g} pieza${g===1?'':'s'}</span>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn ghost" data-close>Cerrar</button>
+      ${g?`<button class="btn gold" data-see-gear="${p.id}" data-close-first>${ic('M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z')} Ver su equipo</button>`:''}
+    </div></div>`,'form');
+}
+
 function tierModal(rid, uid){
   const r=rosterById(rid), p=profileById(uid);
   if(!r||!p) return;
@@ -1881,6 +1944,7 @@ document.addEventListener('click',e=>{
   const rj=t.closest('[data-reject]'); if(rj){ const [ri,ui]=rj.dataset.reject.split(':'); removeMember(ri,ui); return; }
   const kk=t.closest('[data-kick]'); if(kk){ const [ri,ui]=kk.dataset.kick.split(':'); removeMember(ri,ui); return; }
   const tp=t.closest('[data-tier-pick]'); if(tp){ const [ri,ui]=tp.dataset.tierPick.split(':'); tierModal(ri,ui); return; }
+  const pinfo=t.closest('[data-person-info]'); if(pinfo){ personInfoModal(pinfo.dataset.personInfo); return; }
   const stt=t.closest('[data-set-tier]'); if(stt){ const [ri,ui,tt]=stt.dataset.setTier.split(':'); setTier(ri,ui,tt); return; }
   const atr=t.closest('[data-add-to-roster]'); if(atr){ addToRosterModal(atr.dataset.addToRoster); return; }
   const pm=t.closest('[data-pick-member]'); if(pm){ const [ri,ui]=pm.dataset.pickMember.split(':'); addMemberDirect(ri,ui); return; }
@@ -1895,7 +1959,7 @@ document.addEventListener('click',e=>{
   const at=t.closest('[data-add-tag]'); if(at){ addTag(at.dataset.addTag); return; }
   const dt=t.closest('[data-del-tag]'); if(dt){ const [f,i]=dt.dataset.delTag.split(':'); delTag(f,+i); return; }
   const acl=t.closest('[data-del-class]'); if(acl){ delClass(+acl.dataset.delClass); return; }
-  const sg=t.closest('[data-see-gear]'); if(sg){ state.ui.gearUser=sg.dataset.seeGear; state.ui.view='equipo'; render(); return; }
+  const sg=t.closest('[data-see-gear]'); if(sg){ if(sg.dataset.closeFirst!==undefined) closeModal(); state.ui.gearUser=sg.dataset.seeGear; state.ui.view='equipo'; render(); return; }
   const sl=t.closest('[data-slot]'); if(sl){ gearModal(sl.dataset.slotUser, sl.dataset.slot); return; }
   const gs=t.closest('[data-gear-save]'); if(gs){ const [u,k]=gs.dataset.gearSave.split(':'); saveGear(u,k); return; }
   const gc=t.closest('[data-gear-clear]'); if(gc){ const [u,k]=gc.dataset.gearClear.split(':'); clearGear(u,k); return; }
