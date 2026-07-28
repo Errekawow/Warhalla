@@ -187,6 +187,24 @@
   .role-svg.role-dps{color:#e0925f}
   .role-svg.role-support{color:#b9a3e8}
   .role-emoji{font-size:13px;line-height:1;display:inline-flex;align-items:center;margin-left:1px}
+  /* Reservas de botín */
+  .reserve-row{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .reserve-row:last-child{border-bottom:none}
+  .reserve-name{font-size:14.5px;font-weight:600;margin-bottom:4px}
+  .reserve-name a{text-decoration:none}
+  .reserve-name a:hover{text-decoration:underline}
+  .prio-alta{color:#e08585;border-color:rgba(224,90,90,.4);background:rgba(224,90,90,.1)} .prio-alta .dot{background:#e05a5a}
+  .prio-media{color:#e0c07a;border-color:rgba(224,180,90,.4);background:rgba(224,180,90,.1)} .prio-media .dot{background:#e0b45a}
+  .prio-baja{color:#a9c3d6;border-color:rgba(120,150,180,.35);background:rgba(120,150,180,.1)} .prio-baja .dot{background:#8aa8c0}
+  .res-table{display:flex;flex-direction:column}
+  .res-trow{display:grid;grid-template-columns:1.3fr 1.6fr auto auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .res-trow:last-child{border-bottom:none}
+  .res-who{display:flex;align-items:center;gap:9px;min-width:0}
+  .res-item{display:flex;align-items:center;gap:9px;min-width:0}
+  @media(max-width:640px){
+    .res-trow{grid-template-columns:1fr auto;gap:8px 10px}
+    .res-item{grid-column:1 / -1;padding-left:39px}
+  }
   /* Bloques de plantilla / reserva / resto */
   .tier-block{margin-bottom:14px;padding:10px 12px;border-radius:10px;background:var(--stone-2);border:1px solid var(--line)}
   .tier-block.tier-starter{border-color:rgba(231,200,119,.35);background:rgba(231,200,119,.05)}
@@ -636,7 +654,7 @@ async function ensureProfile(user){
   CAN_LOOT = !!(me.is_admin || me.is_officer || me.is_looter);
 }
 async function loadAll(){
-  const [set, profs, evs, sus, dkp, auc, bid, ros, rmem] = await Promise.all([
+  const [set, profs, evs, sus, dkp, auc, bid, ros, rmem, lres] = await Promise.all([
     sb.from('settings').select('*').eq('id',1).maybeSingle(),
     sb.from('profiles').select('*').order('display_name'),
     sb.from('events').select('*'),
@@ -645,7 +663,8 @@ async function loadAll(){
     sb.from('auctions').select('*'),
     sb.from('bids').select('*'),
     sb.from('rosters').select('*').order('sort'),
-    sb.from('roster_members').select('*')
+    sb.from('roster_members').select('*'),
+    sb.from('loot_reserves').select('*').order('created_at')
   ]);
   if(set.data) state.settings = { ...state.settings, ...set.data, classes:set.data.classes||[], roles:set.data.roles||[], ranks:set.data.ranks||[] };
   state.profiles = profs.data||[];
@@ -656,6 +675,7 @@ async function loadAll(){
   state.bids = bid.data||[];
   state.rosters = ros.data||[];
   state.rmembers = rmem.data||[];
+  state.reserves = lres.data||[];
 }
 async function refetch(what){
   if(what==='profiles') state.profiles=(await sb.from('profiles').select('*').order('display_name')).data||[];
@@ -666,6 +686,7 @@ async function refetch(what){
   if(what==='bids')     state.bids=(await sb.from('bids').select('*')).data||[];
   if(what==='rosters')  state.rosters=(await sb.from('rosters').select('*').order('sort')).data||[];
   if(what==='rmembers') state.rmembers=(await sb.from('roster_members').select('*')).data||[];
+  if(what==='reserves') state.reserves=(await sb.from('loot_reserves').select('*').order('created_at')).data||[];
   if(what==='settings'){ const {data}=await sb.from('settings').select('*').eq('id',1).maybeSingle(); if(data) state.settings={...state.settings,...data,classes:data.classes||[],roles:data.roles||[],ranks:data.ranks||[]}; }
   if(MODAL.type==='eventDetail' && (what==='signups'||what==='events')) eventDetailModal(MODAL.eventId);
   else if(MODAL.type==='auctionBids' && (what==='bids'||what==='auctions')) auctionBidsModal(MODAL.eventId);
@@ -684,6 +705,7 @@ function subscribeRealtime(){
       .on('postgres_changes',{event:'*',schema:'public',table:'bids'},()=>refetch('bids'))
       .on('postgres_changes',{event:'*',schema:'public',table:'rosters'},()=>refetch('rosters'))
       .on('postgres_changes',{event:'*',schema:'public',table:'roster_members'},()=>refetch('rmembers'))
+      .on('postgres_changes',{event:'*',schema:'public',table:'loot_reserves'},()=>refetch('reserves'))
       .subscribe();
   }catch(err){
     // El tiempo real es un extra: si falla, la app sigue funcionando (con recarga manual)
@@ -724,7 +746,7 @@ function renderSetup(){
   </div></div>`;
 }
 
-if(typeof state!=='undefined'){ state.rosters=state.rosters||[]; state.rmembers=state.rmembers||[]; }
+if(typeof state!=='undefined'){ state.rosters=state.rosters||[]; state.rmembers=state.rmembers||[]; state.reserves=state.reserves||[]; }
 function tabsFor(){
   const base=[
     {id:'panel',label:'Panel',icon:'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'},
@@ -732,6 +754,7 @@ function tabsFor(){
     {id:'rosters',label:'Rosters',icon:'M4 5h16M4 12h16M4 19h16M8 5v14'},
     {id:'raids',label:'Calendario',icon:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
     {id:'subastas',label:'Subastas',icon:'M14 13l-7 7M3 21h8M13 6l5 5M9.5 6.5l8 8 3-3-8-8zM6 10l5 5'},
+    {id:'reservas',label:'Reservas',icon:'M5 3h14a1 1 0 011 1v17l-8-4-8 4V4a1 1 0 011-1z'},
   ];
   base.push({id:'equipo',label:'Mi Equipo',icon:'M12 2l7 4v6c0 5-3 8-7 10-4-2-7-5-7-10V6z'});
   base.push({id:'cuenta',label:'Mi Cuenta',icon:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'});
@@ -770,6 +793,7 @@ function bodyFor(){
   if(v==='panel') return viewPanel();
   if(v==='roster') return viewRoster();
   if(v==='rosters') return viewRosters();
+  if(v==='reservas') return viewReservas();
   if(v==='raids') return viewRaids();
   if(v==='subastas') return viewSubastas();
   if(v==='equipo') return viewEquipo(state.ui.gearUser || ME.id);
@@ -908,6 +932,150 @@ function compDe(lista){
 }
 function pendingOf(rid){ return (state.rmembers||[]).filter(m=>m.roster_id===rid && m.status==='pending'); }
 function myState(rid){ const m=(state.rmembers||[]).find(x=>x.roster_id===rid && x.user_id===ME.id); return m?m.status:null; }
+
+/* ============================================================
+   RESERVAS DE BOTÍN (Loot Reserves)
+   Cada miembro reserva hasta 2 objetos con prioridad. Fecha registrada.
+   Cada uno ve las suyas; la dirección de botín ve todas.
+   ============================================================ */
+const RES_MAX = 2;
+const PRIOS = { alta:'Alta', media:'Media', baja:'Baja' };
+function prioClass(p){ return 'prio-'+(p||'media'); }
+function myReserves(){ return (state.reserves||[]).filter(r=>r.user_id===ME.id && r.status==='active'); }
+function fmtDateTime(iso){ if(!iso) return ''; const d=new Date(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()}`; }
+
+function viewReservas(){
+  const mias = myReserves();
+  const libre = RES_MAX - mias.length;
+  // La dirección ve TODAS; un miembro ve solo las suyas (RLS ya lo garantiza en BD)
+  const todas = (state.reserves||[]).filter(r=>r.status==='active');
+
+  return `<div class="view">
+    <div class="eyebrow">Botín que buscas</div>
+    <div class="page-head"><h2>Reservas de botín</h2>
+      ${libre>0?`<button class="btn gold" data-new-reserve>${ic('M12 5v14M5 12h14')} Reservar objeto</button>`
+        :`<span class="chip">Tienes las ${RES_MAX} reservas ocupadas</span>`}</div>
+
+    <div class="note" style="margin-bottom:16px">Puedes reservar hasta <b>${RES_MAX} objetos</b> a la vez. Sirve para dejar constancia, con fecha, de lo que buscas de cara al reparto. ${CAN_LOOT?'Como dirección de botín, ves las de todo el gremio.':'Solo tú y la dirección veis tus reservas.'}</div>
+
+    <div class="panel"><div class="panel-h"><h3>${CAN_LOOT?'Mis reservas':'Tus reservas'}</h3>
+      <span class="chip">${mias.length} / ${RES_MAX}</span></div>
+      <div class="panel-b">
+        ${mias.length? mias.map(r=>reserveRow(r,true)).join('') :
+          '<p class="muted" style="margin:0">No tienes ninguna reserva activa. Pulsa “Reservar objeto”.</p>'}
+      </div></div>
+
+    ${CAN_LOOT? `<div class="panel" style="margin-top:16px"><div class="panel-h">
+        <h3>Todas las reservas del gremio</h3><span class="chip">${todas.length}</span></div>
+      <div class="panel-b">
+        ${todas.length? reservesTable(todas) : '<p class="muted" style="margin:0">Nadie ha reservado nada todavía.</p>'}
+      </div></div>`:''}
+  </div>`;
+}
+
+// Fila de una reserva (vista del dueño)
+function reserveRow(r, owner){
+  return `<div class="reserve-row">
+    ${r.item_icon?iconBox(r.item_icon,r.item_quality,true):`<div class="ic-box sm"><span class="ph">◇</span></div>`}
+    <div class="grow" style="min-width:0">
+      <div class="reserve-name">${r.item_id?`<a href="https://db.ascension.gg/?item=${r.item_id}" target="_blank" rel="noopener" class="${qClass(r.item_quality)}">${esc(r.item)}</a>`:`<span class="${qClass(r.item_quality)}">${esc(r.item)}</span>`}</div>
+      <div class="sub-line">
+        <span class="chip ${prioClass(r.priority)}"><span class="dot"></span>Prioridad ${PRIOS[r.priority]||'Media'}</span>
+        <span class="muted" style="font-size:11.5px">Reservado el ${fmtDateTime(r.created_at)}</span>
+      </div>
+      ${r.notes?`<div class="muted" style="font-size:12px;margin-top:5px">${esc(r.notes)}</div>`:''}
+    </div>
+    ${owner?`<button class="icon-btn" data-edit-reserve="${r.id}" title="Editar">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')}</button>
+      <button class="icon-btn" data-del-reserve="${r.id}" title="Quitar">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button>`:''}
+  </div>`;
+}
+
+// Tabla para la dirección: quién reserva qué, ordenada por prioridad
+function reservesTable(list){
+  const orden={alta:0,media:1,baja:2};
+  const ord=[...list].sort((a,b)=>(orden[a.priority]-orden[b.priority]) || (new Date(a.created_at)-new Date(b.created_at)));
+  return `<div class="res-table">
+    ${ord.map(r=>{
+      const p=profileById(r.user_id);
+      return `<div class="res-trow">
+        <div class="res-who">
+          <div class="avatar" style="width:30px;height:30px;flex-basis:30px;font-size:12px">${p&&p.avatar_url?`<img src="${esc(p.avatar_url)}">`:initials(p?p.display_name:'?')}</div>
+          <div style="min-width:0">
+            <div class="name" style="font-size:13.5px">${p?esc(p.display_name):'—'}</div>
+            <div class="sub-line">${p?`<span class="chip" style="padding:1px 7px">${classIconHTML(p.char_class,p.spec)}${classNameHTML(p.char_class,p.spec)}</span>`:''}${p&&p.role?`<span class="chip ${roleClass(p.role)}" style="padding:1px 7px">${roleSvg(p.role)}${esc(p.role)}</span>`:''}</div>
+          </div>
+        </div>
+        <div class="res-item">
+          ${r.item_icon?iconBox(r.item_icon,r.item_quality,true):''}
+          <div style="min-width:0">
+            <div class="reserve-name">${r.item_id?`<a href="https://db.ascension.gg/?item=${r.item_id}" target="_blank" rel="noopener" class="${qClass(r.item_quality)}">${esc(r.item)}</a>`:`<span class="${qClass(r.item_quality)}">${esc(r.item)}</span>`}</div>
+            <span class="muted" style="font-size:11px">${fmtDateTime(r.created_at)}</span>
+          </div>
+        </div>
+        <span class="chip ${prioClass(r.priority)}"><span class="dot"></span>${PRIOS[r.priority]||'Media'}</span>
+        <button class="icon-btn" data-del-reserve="${r.id}" title="Quitar reserva">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* --- crear / editar reserva --- */
+function reserveModal(id){
+  const r = (state.reserves||[]).find(x=>x.id===id) || {item:'',item_id:null,item_icon:'',item_quality:null,priority:'media',notes:''};
+  const edit = !!(r && r.id);
+  if(!edit && myReserves().length>=RES_MAX){ toast('Ya tienes '+RES_MAX+' reservas activas'); return; }
+  openModal(`<div class="modal"><div class="modal-h"><h3>${edit?'Editar reserva':'Reservar objeto'}</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Objeto</label><input id="rItem" value="${esc(r.item)}" placeholder="p.ej. Arco del Lobo Invernal"></div>
+      <div class="field"><label>Enlace o ID <span class="lock">(db.ascension.gg)</span></label>
+        <input id="rItemId" value="${r.item_id||''}" placeholder="Pega el enlace del objeto o solo el número"></div>
+      <div class="field-row">
+        <div class="field"><label>Icono <span class="lock">(opcional)</span></label>
+          <input id="rIcon" value="${esc(r.item_icon||'')}" placeholder="inv_bow_07"></div>
+        <div class="field"><label>Calidad</label>
+          <select id="rQ"><option value="">— Sin definir —</option>
+            ${QUALITIES.map(([v,n])=>`<option value="${v}" ${String(r.item_quality)===String(v)?'selected':''}>${n}</option>`).join('')}
+          </select></div>
+      </div>
+      <div class="note" style="margin-bottom:14px">Pega el enlace y el objeto se verá <b>con su icono y color</b>, y podrás abrir su ficha.</div>
+      <div class="field"><label>Prioridad</label>
+        <div class="seg" id="rPrio">
+          <div class="opt ${r.priority==='alta'?'sel':''}" data-prio="alta">Alta</div>
+          <div class="opt ${r.priority==='media'||!r.priority?'sel':''}" data-prio="media">Media</div>
+          <div class="opt ${r.priority==='baja'?'sel':''}" data-prio="baja">Baja</div>
+        </div></div>
+      <div class="field" style="margin-bottom:0"><label>Notas <span class="lock">(opcional)</span></label>
+        <textarea id="rNotes" placeholder="Para qué la quieres, spec, etc.">${esc(r.notes||'')}</textarea></div>
+    </div>
+    <div class="modal-f">
+      ${edit?`<button class="btn danger" data-del-reserve="${r.id}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Quitar</button>`:''}
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn gold" data-save-reserve="${edit?r.id:''}">${ic('M5 13l4 4L19 7')} ${edit?'Guardar':'Reservar'}</button>
+    </div></div>`,'form');
+}
+async function saveReserve(id){
+  const item=($mroot.querySelector('#rItem').value||'').trim();
+  if(!item){ toast('¿Qué objeto quieres reservar?'); return; }
+  const prio=$mroot.querySelector('#rPrio .opt.sel')?.dataset.prio || 'media';
+  const row={ item,
+    item_id: parseItemId($mroot.querySelector('#rItemId').value),
+    item_icon: ($mroot.querySelector('#rIcon').value||'').trim() || null,
+    item_quality: $mroot.querySelector('#rQ').value ? +$mroot.querySelector('#rQ').value : null,
+    priority: prio, notes:($mroot.querySelector('#rNotes').value||'').trim() || null };
+  let error;
+  if(id){ ({error}=await sb.from('loot_reserves').update(row).eq('id',id)); }
+  else { ({error}=await sb.from('loot_reserves').insert({...row, user_id:ME.id, status:'active'})); }
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('reserves'); toast(id?'Reserva actualizada':'Objeto reservado');
+}
+async function delReserve(id){
+  const { error } = await sb.from('loot_reserves').delete().eq('id',id);
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('reserves'); toast('Reserva eliminada');
+}
+
 
 function viewRosters(){
   const rosters = state.rosters||[];
@@ -1586,6 +1754,7 @@ function memberModal(id){
   if(cs) cs.addEventListener('change',()=>{ ss.innerHTML=optionListVacia(specsOf(cs.value),'','Elige spec'); });
   const seg=$mroot.querySelector('#mAdmin'); if(seg) seg.addEventListener('click',e=>{const o=e.target.closest('[data-adm]');if(!o)return;seg.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
   const gen=$mroot.querySelector('#mGen'); if(gen) gen.addEventListener('click',e=>{const o=e.target.closest('[data-gen]');if(!o)return;gen.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
+  const rp=$mroot.querySelector('#rPrio'); if(rp) rp.addEventListener('click',e=>{const o=e.target.closest('[data-prio]');if(!o)return;rp.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');});
 }
 async function saveMember(id){
   const name=($mroot.querySelector('#mName').value||'').trim(); if(!name){ toast('Ponle nombre'); return; }
@@ -1947,6 +2116,11 @@ document.addEventListener('click',e=>{
   const kk=t.closest('[data-kick]'); if(kk){ const [ri,ui]=kk.dataset.kick.split(':'); removeMember(ri,ui); return; }
   const tp=t.closest('[data-tier-pick]'); if(tp){ const [ri,ui]=tp.dataset.tierPick.split(':'); tierModal(ri,ui); return; }
   const pinfo=t.closest('[data-person-info]'); if(pinfo){ personInfoModal(pinfo.dataset.personInfo); return; }
+  // --- Reservas de botín ---
+  if(t.closest('[data-new-reserve]')){ reserveModal(); return; }
+  const er2=t.closest('[data-edit-reserve]'); if(er2){ reserveModal(er2.dataset.editReserve); return; }
+  const sr2=t.closest('[data-save-reserve]'); if(sr2){ saveReserve(sr2.dataset.saveReserve||null); return; }
+  const dr2=t.closest('[data-del-reserve]'); if(dr2){ delReserve(dr2.dataset.delReserve); return; }
   const stt=t.closest('[data-set-tier]'); if(stt){ const [ri,ui,tt]=stt.dataset.setTier.split(':'); setTier(ri,ui,tt); return; }
   const atr=t.closest('[data-add-to-roster]'); if(atr){ addToRosterModal(atr.dataset.addToRoster); return; }
   const pm=t.closest('[data-pick-member]'); if(pm){ const [ri,ui]=pm.dataset.pickMember.split(':'); addMemberDirect(ri,ui); return; }
