@@ -186,6 +186,7 @@
   .role-svg.role-heal{color:#8fd07a}
   .role-svg.role-dps{color:#e0925f}
   .role-svg.role-support{color:#b9a3e8}
+  .role-emoji{font-size:13px;line-height:1;display:inline-flex;align-items:center;margin-left:1px}
   /* Bloques de plantilla / reserva / resto */
   .tier-block{margin-bottom:14px;padding:10px 12px;border-radius:10px;background:var(--stone-2);border:1px solid var(--line)}
   .tier-block.tier-starter{border-color:rgba(231,200,119,.35);background:rgba(231,200,119,.05)}
@@ -368,11 +369,12 @@ function roleKind(role){ const x=(role||'').toLowerCase();
   return'dps'; }
 function roleSvg(role){
   const k=roleKind(role);
-  // Todos rellenos y de trazo simple para que se lean bien a tamaño pequeño
+  // El DPS usa el emoji de espadas cruzadas (lo pinta el sistema, siempre nítido).
+  // El resto, iconos SVG que se ven bien a tamaño pequeño.
+  if(k==='dps') return `<span class="role-emoji" title="DPS">⚔️</span>`;
   const paths={
     tank:'<path d="M12 2l7 2.5v6.2c0 4.6-3 7.8-7 9.3-4-1.5-7-4.7-7-9.3V4.5z" fill="currentColor" stroke="none"/>',
     heal:'<path d="M9.5 3h5v5.5H20v5h-5.5V19h-5v-5.5H4v-5h5.5z" fill="currentColor" stroke="none"/>',
-    dps:'<path d="M13.5 3l2 2-6.5 6.5 1.2 1.2-1.4 1.4-1.2-1.2-1.3 1.3 2.5 2.5-1.4 1.4-1.2-1.2-2 2-1.4-1.4 2-2-1.2-1.2 1.4-1.4 2.5 2.5z" fill="currentColor" stroke="none"/>',
     support:'<path d="M12 2.8 L14.23 8.93 L20.75 9.16 L15.61 13.17 L17.41 19.44 L12 15.8 L6.59 19.44 L8.39 13.17 L3.25 9.16 L9.77 8.93 Z" fill="currentColor" stroke="none"/>'
   };
   return `<svg class="role-svg role-${k}" viewBox="0 0 24 24" fill="currentColor" stroke="none">${paths[k]}</svg>`;
