@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Walhalla · Mesa de Guerra</title>
+<title>Warhalla · Vista previa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -11,7 +11,6 @@
      enlaces siguen funcionando: llevan a la ficha del objeto. -->
 <script>var aowow_tooltips = { "colorlinks": true, "iconizelinks": true, "renamelinks": false };</script>
 <script src="https://db.ascension.gg/static/widgets/power.js" async></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --stone:#0d1015; --stone-2:#141922; --stone-3:#1c232f; --stone-4:#252e3c;
@@ -163,6 +162,11 @@
   .doll-sub{display:flex;flex-direction:column;align-items:center;gap:5px}
   .doll-count{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted)}
   /* fila de armas */
+  /* Build de BisBeard incrustada */
+  .build-frame{position:relative;width:100%;height:70vh;min-height:460px;border-radius:12px;overflow:hidden;
+    border:1px solid var(--line-2);background:#0b0c12}
+  .build-frame iframe{width:100%;height:100%;border:0;display:block}
+  @media(max-width:640px){ .build-frame{height:75vh;min-height:520px} }
   .doll-weapons{display:flex;gap:9px;justify-content:center;margin-top:14px;
        padding-top:14px;border-top:1px solid var(--line)}
   @media(max-width:430px){
@@ -348,8 +352,8 @@
    CONFIGURACIÓN: pega abajo tus 2 claves de Supabase
    (Project URL y anon key). Vienen en GUIA-INSTALACION.md
    ============================================================ */
-const SUPABASE_URL      = "https://fpadabyqsdmlvxsnawof.supabase.co";   // p.ej. https://abcd1234.supabase.co
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwYWRhYnlxc2RtbHZ4c25hd29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NzkzNDAsImV4cCI6MjA5OTQ1NTM0MH0.I-Zs1TBWCsiExFe2sTDO093qb-pmUnQyJ0BZva6oYmI";      // clave "anon public"
+const SUPABASE_URL = "https://demo.local";   // p.ej. https://abcd1234.supabase.co
+const SUPABASE_ANON_KEY = "demo_no_se_usa_1234567890";      // clave "anon public"
 
 let sb = null;
 let ME = null;
@@ -614,7 +618,7 @@ function toast(msg,isErr){
   toastT=setTimeout(()=>el.remove(), isErr?3400:2200);
 }
 
-function configured(){ return SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY.length>20; }
+function configured(){ return true; }
 
 async function boot(){
   if(!configured()){ renderSetup(); return; }
@@ -713,7 +717,7 @@ function subscribeRealtime(){
     CHANNEL = null;
   }
 }
-function signOut(){ sb.auth.signOut(); }
+function signOut(){ toast('Vista previa: usa el conmutador de abajo.'); }
 
 function sigilSVG(){ return `<svg viewBox="0 0 24 24" fill="#e7c877" stroke="none"><path d="M12 2.8 L14.23 8.93 L20.75 9.16 L15.61 13.17 L17.41 19.44 L12 15.8 L6.59 19.44 L8.39 13.17 L3.25 9.16 L9.77 8.93 Z"/></svg>`; }
 function renderLoading(){ $root.innerHTML=`<div class="gate"><div class="gate-card"><div class="sig">${sigilSVG()}</div><div class="spinner"></div><p class="muted">Abriendo las puertas del salón…</p></div></div>`; }
@@ -1624,11 +1628,28 @@ function viewEquipo(uid){
   const editable = mine || CAN_RAID;
   const izq = SLOTS.slice(0,8), der = SLOTS.slice(8);
   const total = SLOTS.length + SLOTS_ARMAS.length;
-  return `<div class="view">
-    <div class="eyebrow">${mine?'Tu equipo':'Equipo de '+esc(p.display_name)}</div>
-    <div class="page-head"><h2>${mine?'Mi Equipo':esc(p.display_name)}</h2>
-      ${!mine?`<button class="btn ghost" data-tab="roster">${ic('M15 18l-6-6 6-6')} Volver al Gremio</button>`:''}</div>
-    <div class="panel"><div class="panel-b">
+  const build = (p.build_url||'').trim();
+  const tieneBuild = /^https?:\/\//i.test(build);
+
+  // Bloque de la build de BisBeard (si hay enlace)
+  const buildBlock = tieneBuild ? `
+    <div class="panel" style="margin-bottom:16px"><div class="panel-h">
+      <h3><span class="rune">ᛒ</span> ${mine?'Mi build':'Build de '+esc(p.display_name)} · BisBeard</h3>
+      <a class="btn sm gold" href="${esc(build)}" target="_blank" rel="noopener">${ic('M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3')} Abrir en BisBeard</a>
+    </div>
+      <div class="panel-b">
+        <div class="build-frame">
+          <iframe src="${esc(build)}" loading="lazy" referrerpolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+        </div>
+        <div class="note" style="margin-top:12px">Si el recuadro sale en blanco, es que BisBeard no permite mostrarse aquí dentro: usa el botón <b>“Abrir en BisBeard”</b> de arriba para verla completa.</div>
+      </div></div>` : '';
+
+  // El muñeco manual: primario si no hay build, secundario si la hay
+  const doll = `<div class="panel"><div class="panel-h">
+      <h3><span class="rune">ᛜ</span> Equipo detallado ${tieneBuild?'<span class="lock">(opcional)</span>':''}</h3>
+      <span class="chip">${gearCount(p)} / ${total}</span></div>
+    <div class="panel-b">
       <div class="doll">
         <div class="doll-col">${izq.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
         <div class="doll-center">
@@ -1644,8 +1665,18 @@ function viewEquipo(uid){
         <div class="doll-col">${der.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
       </div>
       <div class="doll-weapons">${SLOTS_ARMAS.map(([k,l])=>slotHTML(p,k,l,editable)).join('')}</div>
-      ${editable?'<div class="note" style="margin-top:14px">Pulsa una ranura para poner o cambiar la pieza. Copia el enlace del objeto desde <b>db.ascension.gg</b>.</div>':''}
-    </div></div>
+      ${editable?`<div class="note" style="margin-top:14px">${mine&&!tieneBuild?'¿Prefieres tu build de BisBeard? Pégala en <b>Editar mi ficha → Mi build</b> y se verá aquí arriba.<br>':''}Pulsa una ranura para poner o cambiar la pieza. Copia el enlace del objeto desde <b>db.ascension.gg</b>.</div>`:''}
+    </div></div>`;
+
+  return `<div class="view">
+    <div class="eyebrow">${mine?'Tu equipo':'Equipo de '+esc(p.display_name)}</div>
+    <div class="page-head"><h2>${mine?'Mi Equipo':esc(p.display_name)}</h2>
+      <div style="display:flex;gap:8px">
+        ${mine?`<button class="btn ghost" data-edit-member="${p.id}">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')} Editar mi ficha</button>`:''}
+        ${!mine?`<button class="btn ghost" data-tab="roster">${ic('M15 18l-6-6 6-6')} Volver al Gremio</button>`:''}
+      </div></div>
+    ${buildBlock}
+    ${doll}
   </div>`;
 }
 
@@ -1737,6 +1768,9 @@ function memberModal(id){
         <div class="field"><label>Especialización</label><select id="mSpec">${optionListVacia(specsParaFicha(cls,p.spec),p.spec&&!specsOf(cls).includes(p.spec)?p.spec+'  (spec antigua)':p.spec,'Elige spec')}</select></div>
       </div>
       <div class="field"><label>Rol</label><select id="mRole">${optionListVacia(state.settings.roles,p.role,'Elige rol')}</select></div>
+      ${mine?`<div class="field"><label>Mi build <span class="lock">(BisBeard)</span></label>
+        <input id="mBuild" value="${esc(p.build_url||'')}" placeholder="Pega aquí el enlace de tu build (botón Share Build)">
+        <div class="note" style="margin-top:8px">En BisBeard, monta tu personaje y pulsa <b>“Share Build”</b>. Pega ese enlace aquí y tu build se verá en <b>Mi Equipo</b>.</div></div>`:''}
       <div class="field"><label>Rango ${canAdmin?'':'<span class="lock">(lo asigna la dirección)</span>'}</label>
         <select id="mRank" ${canAdmin?'':'disabled'}>${optionListVacia(state.settings.ranks,p.rank,'Sin rango')}</select></div>
       ${canAdmin&&!mine?`<div class="field" style="margin-bottom:0"><label>Cargo en el gremio</label>
@@ -1769,6 +1803,8 @@ async function saveMember(id){
   const patch={ display_name:name, char_class:$mroot.querySelector('#mCls').value||null, spec:specLimpia($mroot.querySelector('#mSpec').value)||null, role:$mroot.querySelector('#mRole').value||null,
     race: $mroot.querySelector('#mRace').value||null,
     gender: ($mroot.querySelector('#mGen .opt.sel')?.dataset.gen)||'M' };
+  const bEl=$mroot.querySelector('#mBuild');
+  if(bEl) patch.build_url = (bEl.value||'').trim() || null;
   if(IS_ADMIN){ patch.rank=$mroot.querySelector('#mRank').value||null;
     const seg=$mroot.querySelector('#mAdmin');
     if(seg){ const n=seg.querySelector('.opt.sel')?.dataset.adm||'0';
@@ -2229,6 +2265,222 @@ document.addEventListener('keydown',e=>{
     if(e.target.classList.contains('clsIcon')) saveClassIcon(+e.target.dataset.ci);
     if(e.target.classList.contains('specIcon')) saveSpecIcon(+e.target.dataset.ci,+e.target.dataset.si); }
 });
+
+/* ================= VISTA PREVIA (sin Supabase) ================= */
+let __n=1; const genId=()=>'id_'+(__n++);
+let __t=1; const ts=()=>'2026-07-20T00:00:'+String(__t++).padStart(2,'0')+'Z';
+const dfn=n=>new Date(Date.now()+n*86400000).toISOString().slice(0,10);
+
+const CLASES_DEMO = Object.keys(COA).map(n=>({
+  name:n, color:COA[n][0], icon:null,
+  specs: COA[n].slice(1).map(s=>({name:s,icon:null}))
+}));
+
+const DEMO_DB = {
+  settings:[{id:1,guild_name:'Warhalla',dkp_default:20,classes:CLASES_DEMO,
+    roles:['Tanque','Sanador','DPS','Support'],
+    ranks:['Gran Maestre','Jarl','Guerrero','Recluta']}],
+  profiles:[
+    {id:'u_lider',display_name:'Erreka',avatar_url:null,race:'Trol',gender:'M',
+     char_class:'Pyromancer',spec:'Incineration',role:'DPS',rank:'Gran Maestre',build_url:'https://coa.bisbeard.com/b/AdEwYGg7wqEjDb',
+     is_admin:true,is_officer:false,is_raidlead:false,is_looter:false,created_at:ts(),
+     gear:{ head:{name:'Cenarion Infantry Helmet',id:16704,icon:'inv_helmet_21',q:4},
+            neck:{name:"Jin'do's Evil Eye",id:19898,icon:'inv_misc_gem_pearl_03',q:4},
+            shoulder:{name:'Blackscale Shoulders',id:16833,icon:'inv_shoulder_25',q:3},
+            back:{name:'Cloak of the Shifting Sands',id:21525,icon:'inv_misc_cape_18',q:4},
+            chest:{name:'Argent Dawn Breastplate',id:22083,icon:'inv_chest_plate16',q:4},
+            wrist:{name:'Corroded Qiraji Wraps',id:21507,icon:'inv_bracer_13',q:3},
+            hands:{name:'Blackscale Gloves',id:22006,icon:'inv_gauntlets_25',q:4},
+            waist:{name:'Girdle of the Dawn',id:12103,icon:'inv_belt_15',q:3},
+            legs:{name:'Molten Legguards',id:16805,icon:'inv_pants_plate_04',q:4},
+            feet:{name:'Black Dragonscale Boots',id:15062,icon:'inv_boots_plate_04',q:4},
+            finger1:{name:'Band of Flesh',id:12545,icon:'inv_jewelry_ring_16',q:3},
+            trinket1:{name:"Brotherhood's Whetstone",id:22219,icon:'inv_stone_grindingstone_05',q:4},
+            mainhand:{name:"Quel'Serrar",id:17193,icon:'inv_sword_39',q:4},
+            offhand:{name:'Ancient Buckler',id:22398,icon:'inv_shield_04',q:4} }},
+    {id:'u_ofi',display_name:'Bjorn',avatar_url:null,race:'Enano',gender:'M',
+     char_class:'Guardian',spec:'Vanguard',role:'Tanque',rank:'Jarl',
+     is_admin:false,is_officer:true,is_raidlead:false,is_looter:false,created_at:ts(),
+     gear:{ chest:{name:'Ancient Buckler',id:22398,icon:'inv_shield_04',q:4} }},
+    {id:'u_freya',display_name:'Freya',avatar_url:null,race:'Elfo de sangre',gender:'F',
+     char_class:'Sun Cleric',spec:'Blessings',role:'Sanador',rank:'Guerrero',
+     is_admin:false,is_officer:false,is_raidlead:true,is_looter:false,created_at:ts(),gear:{}},
+    {id:'u_sig',display_name:'Sigrid',avatar_url:null,race:'Draenei',gender:'F',
+     char_class:'Runemaster',spec:'Spellslinger',role:'Support',rank:'Guerrero',
+     is_admin:false,is_officer:false,is_raidlead:false,is_looter:true,created_at:ts(),gear:{}},
+    {id:'u_ivar',display_name:'Ivar',avatar_url:null,race:'Orco',gender:'M',
+     char_class:'Ranger',spec:'Archery',role:'DPS',rank:'Guerrero',
+     is_admin:false,is_officer:false,is_raidlead:false,is_looter:false,created_at:ts(),gear:{head:{name:'Casco de Ivar',id:16704,icon:'inv_helmet_21',q:3},mainhand:{name:'Arco Largo',id:2,icon:'inv_weapon_bow_08',q:3}}},
+    {id:'u_astrid',display_name:'Astrid',avatar_url:null,race:'No-muerto',gender:'F',
+     char_class:'Necromancer',spec:'Animation',role:'DPS',rank:'Recluta',
+     is_admin:false,is_officer:false,is_raidlead:false,is_looter:false,gear_public:false,created_at:ts(),
+     gear:{head:{name:'Capucha Oscura',id:16704,icon:'inv_helmet_21',q:4},chest:{name:'Tunica Sombria',id:3,icon:'inv_chest_cloth_21',q:4}}}
+  ],
+  events:[
+    {id:'e1',type:'Raid',title:'Asalto a Blackrock',date:dfn(3),time:'21:00',size:25,dkp:20,
+     notes:'Master Loot. El botín se subasta jefe a jefe.',settled:false,created_at:ts()},
+    {id:'e2',type:'Evento',title:'Noche de Mazmorras',date:dfn(6),time:'22:00',size:5,dkp:10,notes:'',settled:false,created_at:ts()}
+  ],
+  signups:[
+    {id:genId(),event_id:'e1',user_id:'u_lider',status:'conf',created_at:ts()},
+    {id:genId(),event_id:'e1',user_id:'u_ofi',status:'conf',created_at:ts()},
+    {id:genId(),event_id:'e1',user_id:'u_freya',status:'conf',created_at:ts()},
+    {id:genId(),event_id:'e1',user_id:'u_sig',status:'tent',created_at:ts()},
+    {id:genId(),event_id:'e1',user_id:'u_ivar',status:'susp',created_at:ts()}
+  ],
+  dkp_log:[
+    {id:genId(),user_id:'u_lider',amount:80,reason:'Asistencia acumulada',type:'award',date:dfn(-14),created_at:ts()},
+    {id:genId(),user_id:'u_ofi',amount:100,reason:'Asistencia acumulada',type:'award',date:dfn(-14),created_at:ts()},
+    {id:genId(),user_id:'u_freya',amount:60,reason:'Asistencia acumulada',type:'award',date:dfn(-14),created_at:ts()},
+    {id:genId(),user_id:'u_sig',amount:40,reason:'Asistencia acumulada',type:'award',date:dfn(-14),created_at:ts()},
+    {id:genId(),user_id:'u_ivar',amount:35,reason:'Asistencia acumulada',type:'award',date:dfn(-14),created_at:ts()}
+  ],
+  auctions:[
+    {id:'a1',item:"Quel'Serrar",item_id:17193,item_icon:'inv_sword_39',item_quality:4,
+     notes:'RONDA MS',min_bid:10,mode:'bid',price:null,event_id:'e1',status:'open',winner_id:null,created_at:ts()},
+    {id:'a2',item:'Amulet of the Sand Prince',item_id:21608,item_icon:'inv_jewelry_necklace_13',item_quality:4,
+     notes:'RONDA MS',min_bid:10,mode:'bid',price:null,event_id:'e1',status:'open',winner_id:null,created_at:ts()},
+    {id:'a3',item:'Band of Servitude',item_id:19147,item_icon:'inv_jewelry_ring_21',item_quality:4,
+     notes:'Precio cerrado del gremio',min_bid:0,mode:'fixed',price:40,event_id:'e1',status:'open',winner_id:null,created_at:ts()}
+  ],
+  bids:[
+    {id:genId(),auction_id:'a1',user_id:'u_ofi',amount:55,created_at:ts()},
+    {id:genId(),auction_id:'a1',user_id:'u_ivar',amount:30,created_at:ts()},
+    {id:genId(),auction_id:'a2',user_id:'u_sig',amount:25,created_at:ts()},
+    {id:genId(),auction_id:'a3',user_id:'u_ofi',amount:40,created_at:ts()},
+    {id:genId(),auction_id:'a3',user_id:'u_freya',amount:40,created_at:ts()}
+  ],
+  rosters:[
+    {id:'ro1',name:'Roster Raid 1',descr:'Equipo principal de raid',color:'#e7c877',sort:1,capacity:3,created_at:ts()},
+    {id:'ro2',name:'Roster Raid Alter',descr:'Secundario y suplentes',color:'#8b6fe0',sort:2,created_at:ts()},
+    {id:'ro3',name:'Roster World Boss',descr:'Grupo para jefes de mundo',color:'#48c8b0',sort:3,capacity:3,created_at:ts()},
+    {id:'ro4',name:'Roster Battleground',descr:'Equipo de campos de batalla',color:'#e63030',sort:4,created_at:ts()}
+  ],
+  roster_members:[
+    {id:'rm1',roster_id:'ro1',user_id:'u_lider',status:'member',tier:'starter',created_at:ts()},
+    {id:'rm2',roster_id:'ro1',user_id:'u_ofi',status:'member',tier:'starter',created_at:ts()},
+    {id:'rm3',roster_id:'ro1',user_id:'u_freya',status:'member',tier:'starter',created_at:ts()},
+    {id:'rm4',roster_id:'ro1',user_id:'u_sig',status:'member',tier:'reserve',created_at:ts()},
+    {id:'rm9',roster_id:'ro1',user_id:'u_astrid',status:'member',tier:'roster',created_at:ts()},
+    {id:'rm5',roster_id:'ro1',user_id:'u_ivar',status:'pending',tier:'roster',created_at:ts()},
+    {id:'rm7',roster_id:'ro3',user_id:'u_lider',status:'member',tier:'starter',created_at:ts()},
+    {id:'rm8',roster_id:'ro3',user_id:'u_ivar',status:'member',tier:'roster',created_at:ts()}
+  ],
+  loot_reserves:[
+    {id:'lre1',user_id:'u_lider',item:'Espada Vil de la Legión',item_id:19019,item_icon:'inv_sword_39',item_quality:5,priority:'alta',notes:'BiS para mi spec',status:'active',created_at:'2026-07-22T09:00:00Z'},
+    {id:'lre2',user_id:'u_lider',item:'Anillo de Fuego',item_id:12545,item_icon:'inv_jewelry_ring_16',item_quality:3,priority:'baja',notes:'',status:'active',created_at:'2026-07-24T18:30:00Z'},
+    {id:'lre3',user_id:'u_ofi',item:'Escudo Ancestral',item_id:22398,item_icon:'inv_shield_04',item_quality:4,priority:'media',notes:'Para el set de tanque',status:'active',created_at:'2026-07-23T12:00:00Z'},
+    {id:'lre4',user_id:'u_freya',item:'Cetro de la Luz',item_id:22335,item_icon:'inv_mace_16',item_quality:4,priority:'alta',notes:'',status:'active',created_at:'2026-07-25T20:00:00Z'}
+  ]
+};
+
+let UID='u_lider';
+const yo=()=>DEMO_DB.profiles.find(p=>p.id===UID)||{};
+const esAdmin=()=>!!yo().is_admin;
+const veBotin=()=>!!(yo().is_admin||yo().is_officer||yo().is_looter);
+function filtra(rows,f){ return rows.filter(r=>f.every(([c,v])=>String(r[c])===String(v))); }
+
+class QB {
+  constructor(t){this.t=t;this.op='select';this.f=[];this.p=null;this.oc=null;this.ord=null;this.mode=null;}
+  select(){this.op='select';return this;}
+  insert(p){this.op='insert';this.p=p;return this;}
+  update(p){this.op='update';this.p=p;return this;}
+  upsert(p,o){this.op='upsert';this.p=p;this.oc=o&&o.onConflict;return this;}
+  delete(){this.op='delete';return this;}
+  eq(c,v){this.f.push([c,v]);return this;}
+  order(c){this.ord=c;return this;}
+  maybeSingle(){this.mode='m';return this;}
+  single(){this.mode='s';return this;}
+  then(res){res(this._go());}
+  _tbl(){return DEMO_DB[this.t]||(DEMO_DB[this.t]=[]);}
+  _go(){
+    try{
+      const tbl=this._tbl();
+      if(this.op==='select'){
+        let rows=filtra(tbl,this.f);
+        if(this.t==='dkp_log' && !esAdmin()) rows=rows.filter(r=>r.user_id===UID);
+        if(this.t==='bids' && !veBotin()) rows=rows.filter(r=>r.user_id===UID);
+        if(this.t==='loot_reserves' && !veBotin()) rows=rows.filter(r=>r.user_id===UID);
+        if(this.ord) rows=[...rows].sort((a,b)=>String(a[this.ord]||'').localeCompare(String(b[this.ord]||'')));
+        return this.mode?{data:rows[0]||null,error:null}:{data:rows,error:null};
+      }
+      if(this.op==='insert'){
+        const arr=Array.isArray(this.p)?this.p:[this.p];
+        const ins=arr.map(r=>({id:r.id||genId(),created_at:ts(),...r}));
+        ins.forEach(r=>tbl.push(r)); return {data:ins,error:null};
+      }
+      if(this.op==='update'){ filtra(tbl,this.f).forEach(r=>Object.assign(r,this.p)); return {data:null,error:null}; }
+      if(this.op==='upsert'){
+        const keys=(this.oc||'id').split(',').map(x=>x.trim()); const p=this.p;
+        const hit=tbl.find(r=>keys.every(k=>String(r[k])===String(p[k])));
+        if(hit) Object.assign(hit,p); else tbl.push({id:genId(),created_at:ts(),...p});
+        return {data:null,error:null};
+      }
+      if(this.op==='delete'){
+        const del=filtra(tbl,this.f); const ids=del.map(d=>d.id);
+        DEMO_DB[this.t]=tbl.filter(r=>!del.includes(r));
+        if(this.t==='events') DEMO_DB.signups=DEMO_DB.signups.filter(x=>!ids.includes(x.event_id));
+        if(this.t==='auctions') DEMO_DB.bids=DEMO_DB.bids.filter(x=>!ids.includes(x.auction_id));
+        return {data:null,error:null};
+      }
+    }catch(e){ return {data:null,error:{message:String(e)}}; }
+  }
+}
+
+function demoRpc(fn,args){
+  try{
+    if(!veBotin()) return {data:null,error:{message:'Solo el Master Loot puede hacer eso'}};
+    if(fn==='settle_event'){
+      const e=DEMO_DB.events.find(x=>x.id===args.p_event);
+      if(!e) return {data:null,error:{message:'El evento no existe'}};
+      if(e.settled) return {data:null,error:{message:'Este evento ya tiene el DKP repartido'}};
+      const conf=DEMO_DB.signups.filter(s=>s.event_id===e.id&&s.status==='conf');
+      conf.forEach(s=>DEMO_DB.dkp_log.push({id:genId(),user_id:s.user_id,amount:e.dkp,
+        reason:'Asistencia · '+e.title,type:'award',date:e.date,created_at:ts()}));
+      e.settled=true; return {data:conf.length,error:null};
+    }
+    if(fn==='award_auction'){
+      const a=DEMO_DB.auctions.find(x=>x.id===args.p_auction);
+      if(!a) return {data:null,error:{message:'La subasta no existe'}};
+      if(a.status!=='open') return {data:null,error:{message:'Esa subasta ya está cerrada'}};
+      const b=DEMO_DB.bids.find(x=>x.auction_id===a.id&&x.user_id===args.p_winner);
+      if(!b) return {data:null,error:{message:'Ese jugador no ha pujado'}};
+      DEMO_DB.dkp_log.push({id:genId(),user_id:b.user_id,amount:-b.amount,
+        reason:'Botín · '+a.item,type:'spend',date:new Date().toISOString().slice(0,10),created_at:ts()});
+      a.status='closed'; a.winner_id=b.user_id; return {data:b.amount,error:null};
+    }
+    return {data:null,error:{message:'Función desconocida'}};
+  }catch(e){ return {data:null,error:{message:String(e)}}; }
+}
+
+window.supabase={createClient(){return{
+  from:t=>new QB(t),
+  rpc:(fn,args)=>({then:r=>r(demoRpc(fn,args||{}))}),
+  auth:{ async getSession(){return {data:{session:{user:{id:UID,user_metadata:{full_name:yo().display_name}}}}};},
+    onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}};},
+    async signInWithOAuth(){return {};}, async signOut(){return {};} },
+  channel(){const c={on(){return c},subscribe(){return c}};return c;}
+};}};
+
+async function cambiarRol(uid){
+  UID=uid; ME=null; ENTERING=false; CHANNEL=null;
+  state.ui.view='panel'; state.ui.gearUser=null; closeModal();
+  await enter({user:{id:UID,user_metadata:{full_name:yo().display_name}}});
+  barra();
+}
+function barra(){
+  let b=document.getElementById('demoBar');
+  if(!b){ b=document.createElement('div'); b.id='demoBar'; document.body.appendChild(b); }
+  b.style.cssText='position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:300;display:flex;align-items:center;gap:5px;background:#1c232f;border:1px solid #3a4759;border-radius:30px;padding:6px 8px 6px 12px;box-shadow:0 12px 30px rgba(0,0,0,.55);font-family:Inter,sans-serif;max-width:95vw;flex-wrap:wrap;justify-content:center';
+  const opts=[['u_lider','Líder'],['u_ofi','Oficial'],['u_freya','Raid Leader'],['u_sig','Master Loot'],['u_ivar','Miembro']];
+  b.innerHTML='<span style="font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#8a7538;font-weight:700">Ver como</span>'+
+    opts.map(([id,txt])=>{const on=UID===id;
+      return `<button data-u="${id}" style="cursor:pointer;border:1px solid ${on?'#e7c877':'#3a4759'};background:${on?'linear-gradient(180deg,#e7c877,#c9a24e)':'transparent'};color:${on?'#1a140a':'#b6b0a2'};font-weight:700;font-size:11px;padding:5px 9px;border-radius:20px">${txt}</button>`;
+    }).join('');
+  b.querySelectorAll('[data-u]').forEach(x=>x.onclick=()=>cambiarRol(x.dataset.u));
+}
+barra();
+/* ================= FIN VISTA PREVIA ================= */
 
 boot();
 </script>
