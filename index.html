@@ -194,6 +194,31 @@
   .person-chip.clickable{cursor:pointer;transition:.12s}
   .person-chip.clickable:hover{border-color:var(--gold-dim);background:var(--stone-3)}
   .person-chip.is-me{border-color:var(--gold-dim)}
+  /* Disponibilidad en las placas del roster */
+  .person-chip .av-dot{width:8px;height:8px;border-radius:50%;margin-left:1px;flex:0 0 8px}
+  .person-chip.av-conf{border-color:rgba(110,190,110,.65);background:rgba(90,180,90,.14)}
+  .person-chip.av-conf .av-dot{background:#5fbf5f;box-shadow:0 0 6px rgba(95,191,95,.7)}
+  .person-chip.av-aus{border-color:rgba(224,90,90,.65);background:rgba(224,90,90,.14)}
+  .person-chip.av-aus .av-dot{background:#e05a5a;box-shadow:0 0 6px rgba(224,90,90,.7)}
+  .person-chip.av-aus .pc-name{opacity:.7;text-decoration:line-through;text-decoration-color:rgba(224,90,90,.5)}
+  .person-chip.av-susp{border-color:rgba(228,196,110,.7);background:rgba(228,196,110,.14)}
+  .person-chip.av-susp .av-dot{background:#e4c46e;box-shadow:0 0 6px rgba(228,196,110,.7)}
+  /* Botones de disponibilidad en el modal */
+  .avail-opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .avail-opt{display:flex;flex-direction:column;align-items:center;gap:4px;padding:11px 6px;border-radius:10px;
+    border:1px solid var(--line-2);background:var(--stone-2);color:var(--parch);cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;transition:.12s}
+  .avail-opt svg{width:18px;height:18px}
+  .avail-opt:hover{border-color:var(--gold-dim)}
+  .avail-opt.av-conf.sel{border-color:#5fbf5f;background:rgba(90,180,90,.18);color:#a9e0a9}
+  .avail-opt.av-aus.sel{border-color:#e05a5a;background:rgba(224,90,90,.18);color:#f0b0ac}
+  .avail-opt.av-susp.sel{border-color:#e4c46e;background:rgba(228,196,110,.18);color:#f0dca0}
+  /* Resumen de disponibilidad en la cabecera */
+  .avail-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .av-tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;border:1px solid}
+  .av-tag.av-conf{color:#8fd68f;border-color:rgba(95,191,95,.5);background:rgba(95,191,95,.1)}
+  .av-tag.av-aus{color:#e79a92;border-color:rgba(224,90,90,.5);background:rgba(224,90,90,.1)}
+  .av-tag.av-susp{color:#e4c46e;border-color:rgba(228,196,110,.5);background:rgba(228,196,110,.1)}
+  @media(max-width:640px){ .avail-opts{grid-template-columns:1fr} }
   .person-chip .pc-name{font-weight:500}
   .person-chip .role-svg{width:15px;height:15px;flex:0 0 15px;margin-left:1px}
   .role-svg.role-tank{color:#7fb0e0}
@@ -454,10 +479,13 @@ function personChip(p, opts){
   opts = opts||{};
   const yo = p.id===ME.id;
   const tip = [classDisplay(p.char_class,p.spec), p.role].filter(Boolean).join(' · ');
-  const attr = opts.pick ? `data-tier-pick="${opts.pick}"` : (opts.info ? `data-person-info="${opts.info}"` : '');
-  return `<span class="person-chip ${yo?'is-me':''} ${opts.clickable?'clickable':''}" ${attr} title="${esc(tip)}">
+  const av = opts.avail || null;   // 'conf' | 'aus' | 'susp' | null
+  const avClass = av==='conf'?'av-conf':av==='aus'?'av-aus':av==='susp'?'av-susp':'';
+  const attr = opts.act ? `data-roster-act="${opts.act}"` : (opts.pick ? `data-tier-pick="${opts.pick}"` : (opts.info ? `data-person-info="${opts.info}"` : ''));
+  return `<span class="person-chip ${yo?'is-me':''} ${opts.clickable?'clickable':''} ${avClass}" ${attr} title="${esc(tip)}">
     ${classIconHTML(p.char_class,p.spec)}<span class="pc-name">${esc(p.display_name)}</span>
     ${p.role?roleSvg(p.role):''}
+    ${av?`<span class="av-dot"></span>`:''}
   </span>`;
 }
 function classDisplay(cls,spec){
@@ -998,6 +1026,12 @@ function membersOf(rid){ return (state.rmembers||[]).filter(m=>m.roster_id===rid
 const TIERS = { starter:'Plantilla', reserve:'Reserva', roster:'Resto del roster' };
 function tierOf(m){ return (m && m.tier) || 'roster'; }
 function membersTier(rid,t){ return membersOf(rid).filter(m=>tierOf(m)===t); }
+// Semana actual = lunes de esta semana (YYYY-MM-DD). La disponibilidad se reinicia sola cada semana.
+function weekKey(d){ const x=new Date(d||Date.now()); const off=(x.getDay()+6)%7; x.setDate(x.getDate()-off); x.setHours(0,0,0,0);
+  const z=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${z(x.getMonth()+1)}-${z(x.getDate())}`; }
+// Disponibilidad de un miembro ESTA semana (si es de otra semana, cuenta como sin marcar).
+function availOf(m){ return (m && m.avail && m.avail_week===weekKey()) ? m.avail : null; }
+function availByUser(rid,uid){ const m=(state.rmembers||[]).find(x=>x.roster_id===rid&&x.user_id===uid); return availOf(m); }
 function myTier(rid){ const m=(state.rmembers||[]).find(x=>x.roster_id===rid && x.user_id===ME.id); return m?tierOf(m):null; }
 // Composición de roles de un grupo, para montar la comp de un vistazo
 function compDe(lista){
@@ -1253,7 +1287,8 @@ function rosterCard(r){
       </div>
       ${lista.length? `<div class="chip-people">${lista.map(m=>{
         const p=profileById(m.user_id); if(!p) return '';
-        return personChip(p, { clickable:true, pick:CAN_RAID?`${r.id}:${p.id}`:null, info:!CAN_RAID?p.id:null });
+        const puedo = CAN_RAID || p.id===ME.id;   // dirección: cualquiera · jugador: la suya
+        return personChip(p, { clickable:puedo, avail:availOf(m), act:puedo?`${r.id}:${p.id}`:null, info:!puedo?p.id:null });
       }).join('')}</div>` : `<p class="tier-empty">Nadie por ahora.</p>`}
     </div>`;
   };
@@ -1263,6 +1298,8 @@ function rosterCard(r){
       <div style="flex:1;min-width:0">
         <h3 style="color:${esc(col)}">${esc(r.name)}</h3>
         ${r.descr?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(r.descr)}</div>`:''}
+        ${(()=>{ const ms=membersOf(r.id); const c=ms.filter(m=>availOf(m)==='conf').length, a=ms.filter(m=>availOf(m)==='aus').length, s2=ms.filter(m=>availOf(m)==='susp').length;
+          return (c||a||s2)?`<div class="avail-summary">${c?`<span class="av-tag av-conf">${c} van</span>`:''}${a?`<span class="av-tag av-aus">${a} no</span>`:''}${s2?`<span class="av-tag av-susp">${s2} reserva</span>`:''}</div>`:''; })()}
       </div>
       <span class="chip">${total} en el roster</span>
       ${CAN_RAID?`<button class="icon-btn" data-edit-roster="${r.id}" title="Editar">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')}</button>`:''}
@@ -1280,7 +1317,7 @@ function rosterCard(r){
       ${grupo(resto,'Resto del roster','tier-rest',
         `<span class="tier-count">${resto.length}</span>`)}
 
-      ${CAN_RAID?`<p class="muted" style="font-size:11.5px;margin:10px 0 0">Pulsa sobre un guerrero para moverlo de grupo.</p>`:''}
+      <p class="muted" style="font-size:11.5px;margin:10px 0 0">Pulsa tu nombre para marcar si vas esta semana: verde vas, rojo no, amarillo reserva.${CAN_RAID?' Como direccion, puedes marcar a cualquiera y moverlo de grupo.':''}</p>
 
       ${CAN_RAID && pend.length? `<div style="margin-top:16px">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-weight:700;margin-bottom:8px">Solicitudes (${pend.length})</div>
@@ -1387,13 +1424,16 @@ function tierModal(rid, uid){
   if(!r||!p) return;
   const m=(state.rmembers||[]).find(x=>x.roster_id===rid && x.user_id===uid);
   const actual=tierOf(m);
+  const av=availOf(m);                    // disponibilidad de esta semana
   const cap=r.capacity||null;
   const nTit=membersTier(rid,'starter').length;
   const lleno = cap && nTit>=cap && actual!=='starter';
+  const yo = uid===ME.id;
+  const puedoDisp = yo || CAN_RAID;       // marcar disponibilidad
   openModal(`<div class="modal"><div class="modal-h">
       <div style="flex:1;min-width:0">
         <div class="eyebrow" style="margin:0 0 2px">${esc(r.name)}</div>
-        <h3 style="margin:0">${esc(p.display_name)}</h3>
+        <h3 style="margin:0">${esc(p.display_name)}${yo?' <span class="muted" style="font-size:12px">· tú</span>':''}</h3>
       </div>
       <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
     <div class="modal-b">
@@ -1402,7 +1442,17 @@ function tierModal(rid, uid){
         <span class="chip">${classIconHTML(p.char_class,p.spec)}${classNameHTML(p.char_class,p.spec)}</span>
         ${p.role?`<span class="chip ${roleClass(p.role)}"><span class="dot"></span>${esc(p.role)}</span>`:''}
       </div>
-      <div class="field"><label>¿Dónde va?</label>
+
+      ${puedoDisp?`<div class="field"><label>¿Vas esta semana?</label>
+        <div class="avail-opts">
+          <button class="avail-opt av-conf ${av==='conf'?'sel':''}" data-set-avail="${rid}:${uid}:conf">${ic('M20 6L9 17l-5-5')} Confirmado</button>
+          <button class="avail-opt av-aus ${av==='aus'?'sel':''}" data-set-avail="${rid}:${uid}:aus">${ic('M18 6L6 18M6 6l12 12')} Ausente</button>
+          <button class="avail-opt av-susp ${av==='susp'?'sel':''}" data-set-avail="${rid}:${uid}:susp">${ic('M12 8v4l3 2M12 3a9 9 0 100 18 9 9 0 000-18z')} Reserva</button>
+        </div>
+        ${av?`<button class="btn sm ghost" data-set-avail="${rid}:${uid}:" style="margin-top:8px">Quitar mi marca</button>`:''}
+      </div>`:''}
+
+      ${CAN_RAID?`<div class="field" style="margin-top:4px"><label>Grupo <span class="lock">(solo dirección)</span></label>
         <div class="tier-opts">
           <button class="tier-opt ${actual==='starter'?'sel':''}" data-set-tier="${rid}:${uid}:starter">
             <b>Plantilla</b><span>Entra al contenido${cap?` · ${nTit}/${cap}`:''}</span></button>
@@ -1411,11 +1461,11 @@ function tierModal(rid, uid){
           <button class="tier-opt ${actual==='roster'?'sel':''}" data-set-tier="${rid}:${uid}:roster">
             <b>Resto del roster</b><span>Apuntado, sin plaza asignada</span></button>
         </div>
-      </div>
-      ${lleno?`<div class="note" style="border-left-color:#c96a4e">La plantilla ya está completa (${nTit}/${cap}). Si lo metes igualmente, la dejarás por encima del tope.</div>`:''}
+        ${lleno?`<div class="note" style="border-left-color:#c96a4e;margin-top:10px">La plantilla ya está completa (${nTit}/${cap}). Si lo metes igualmente, la dejarás por encima del tope.</div>`:''}
+      </div>`:''}
     </div>
     <div class="modal-f">
-      <button class="btn danger" data-kick="${rid}:${uid}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Sacar del roster</button>
+      ${CAN_RAID?`<button class="btn danger" data-kick="${rid}:${uid}">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')} Sacar del roster</button>`:''}
       <button class="btn ghost" data-close>Cerrar</button>
     </div></div>`,'form');
 }
@@ -1424,6 +1474,19 @@ async function setTier(rid, uid, tier){
   if(error){ toast(error.message,true); return; }
   closeModal(); await refetch('rmembers');
   toast(tier==='starter'?'A la plantilla':(tier==='reserve'?'A la reserva':'Al resto del roster'));
+}
+async function setAvail(rid, uid, status){
+  const st = status || null;
+  const { error } = await sb.rpc('set_roster_avail', { p_roster:rid, p_user:uid, p_status:st, p_week: weekKey() });
+  if(error){ toast(error.message,true); return; }
+  closeModal(); await refetch('rmembers');
+  toast(st==='conf'?'Confirmado':st==='aus'?'Marcado como ausente':st==='susp'?'Te apuntas de reserva':'Marca quitada');
+}
+async function resetAvail(rid){
+  if(!confirm('¿Reiniciar la disponibilidad de todo el roster? Todos quedarán sin marcar hasta que vuelvan a decir si van.')) return;
+  const { error } = await sb.rpc('reset_roster_avail', { p_roster:rid });
+  if(error){ toast(error.message,true); return; }
+  await refetch('rmembers'); toast('Disponibilidad reiniciada');
 }
 
 /* --- crear / editar roster --- */
@@ -2478,6 +2541,9 @@ document.addEventListener('click',e=>{
   const rj=t.closest('[data-reject]'); if(rj){ const [ri,ui]=rj.dataset.reject.split(':'); removeMember(ri,ui); return; }
   const kk=t.closest('[data-kick]'); if(kk){ const [ri,ui]=kk.dataset.kick.split(':'); removeMember(ri,ui); return; }
   const rdkp=t.closest('[data-roster-dkp]'); if(rdkp){ const [ri,kk]=rdkp.dataset.rosterDkp.split(':'); payRosterDkp(ri,kk); return; }
+  const ract=t.closest('[data-roster-act]'); if(ract){ const [ri,ui]=ract.dataset.rosterAct.split(':'); tierModal(ri,ui); return; }
+  const sav=t.closest('[data-set-avail]'); if(sav){ const [ri,ui,stt]=sav.dataset.setAvail.split(':'); setAvail(ri,ui,stt||null); return; }
+  const rav=t.closest('[data-reset-avail]'); if(rav){ resetAvail(rav.dataset.resetAvail); return; }
   const tp=t.closest('[data-tier-pick]'); if(tp){ const [ri,ui]=tp.dataset.tierPick.split(':'); tierModal(ri,ui); return; }
   const pinfo=t.closest('[data-person-info]'); if(pinfo){ personInfoModal(pinfo.dataset.personInfo); return; }
   // --- Reservas de botín ---
