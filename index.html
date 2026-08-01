@@ -117,6 +117,15 @@
   .role-dps{color:#e6bda0;border-color:rgba(192,122,85,.4);background:rgba(192,122,85,.12)} .role-dps .dot{background:var(--dps)}
   .role-support{color:#d3c3ef;border-color:rgba(169,143,208,.4);background:rgba(169,143,208,.12)} .role-support .dot{background:var(--supp)}
   .rank-chip{font-family:'Cinzel',serif;letter-spacing:.03em;color:var(--gold);border-color:var(--gold-dim);background:rgba(201,162,78,.08)}
+  .me.has-chars{cursor:pointer;border-radius:9px;padding:3px 8px 3px 4px;transition:background .12s}
+  .me.has-chars:hover{background:rgba(231,200,119,.1)}
+  .char-caret{display:inline-flex;margin-left:1px;opacity:.6}
+  .char-caret svg{width:14px;height:14px}
+  .char-row{display:flex;align-items:center;gap:11px;padding:10px;border-radius:10px;border:1px solid var(--line);margin-bottom:8px;transition:.12s}
+  .char-row:last-child{margin-bottom:0}
+  .char-row[data-switch-char]{cursor:pointer}
+  .char-row[data-switch-char]:hover{border-color:var(--gold-dim);background:rgba(231,200,119,.05)}
+  .char-row.active{border-color:var(--gold-dim);background:rgba(231,200,119,.07)}
   .dkp-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--gold-bright)}
   a.item-link{text-decoration:none}
   a.item-link:hover{text-decoration:underline}
@@ -297,8 +306,7 @@
   .react button:hover{color:var(--parch)}
   .react button:disabled{opacity:.4;cursor:not-allowed}
   .react button.on-conf{background:rgba(127,160,98,.2);color:#c3dcae;border-color:var(--moss)}
-  .react button.on-susp{background:rgba(214,154,76,.2);color:#e8c37f;border-color:var(--amber)}
-  .react button.on-tent{background:rgba(111,151,184,.2);color:#bcd6ea;border-color:var(--steel)}
+  .react button.on-susp{background:rgba(150,120,190,.2);color:#c9b8e8;border-color:#8a6fc0}
   .react button.on-aus{background:rgba(176,64,56,.2);color:#e79a92;border-color:var(--blood)}
   .tally{display:flex;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
   .tally .t{display:flex;align-items:center;gap:7px;font-size:13px}
@@ -394,7 +402,9 @@ const SUPABASE_URL      = "https://fpadabyqsdmlvxsnawof.supabase.co";   // p.ej.
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwYWRhYnlxc2RtbHZ4c25hd29mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NzkzNDAsImV4cCI6MjA5OTQ1NTM0MH0.I-Zs1TBWCsiExFe2sTDO093qb-pmUnQyJ0BZva6oYmI";      // clave "anon public"
 
 let sb = null;
-let ME = null;
+let ME = null;           // personaje ACTIVO (main o alt) — identidad: DKP, rosters, equipo
+let ACCOUNT = null;      // la cuenta (login de Discord) — de aquí salen los permisos
+let MY_CHARS = [];       // todos mis personajes (main + alts)
 let IS_ADMIN  = false;   // Líder: puede todo
 let CAN_RAID  = false;   // Raid Leader (u Oficial/Líder): calendario, asistencia, roster
 let CAN_LOOT  = false;   // Master Loot (u Oficial/Líder): subastas, adjudicar, repartir DKP
@@ -666,7 +676,7 @@ async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
   sb.auth.onAuthStateChange((_e, s)=>{
     if(s){ if(!ME && !ENTERING) enter(s); }
-    else { ME=null; IS_ADMIN=false; CAN_RAID=false; CAN_LOOT=false; CHANNEL=null; renderLogin(); }
+    else { ME=null; ACCOUNT=null; MY_CHARS=[]; IS_ADMIN=false; CAN_RAID=false; CAN_LOOT=false; CHANNEL=null; renderLogin(); }
   });
   if(session) enter(session); else renderLogin();
 }
@@ -690,10 +700,33 @@ async function ensureProfile(user){
   if(!data){ await sb.from('profiles').insert({ id:user.id, display_name:name, avatar_url:avatar }); }
   else if(!data.avatar_url && avatar){ await sb.from('profiles').update({ avatar_url:avatar }).eq('id', user.id); }
   const { data:me } = await sb.from('profiles').select('*').eq('id', user.id).single();
-  ME = me;
+  ACCOUNT = me;
+  // Permisos: SIEMPRE de la cuenta, juegues con el personaje que juegues.
   IS_ADMIN = !!me.is_admin;
   CAN_RAID = !!(me.is_admin || me.is_officer || me.is_raidlead);
   CAN_LOOT = !!(me.is_admin || me.is_officer || me.is_looter);
+  // Personaje activo: el último que usé (si sigue siendo mío) o el main.
+  await loadMyChars();
+  const guardado = localStorage.getItem('warhalla_char');
+  const elegido = MY_CHARS.find(c=>c.id===guardado);
+  ME = elegido || ACCOUNT;
+}
+async function loadMyChars(){
+  if(!ACCOUNT){ MY_CHARS=[]; return; }
+  const { data } = await sb.from('profiles').select('*').eq('owner_id', ACCOUNT.id);
+  const list = data||[];
+  // asegurar que el main está en la lista
+  if(!list.find(c=>c.id===ACCOUNT.id)) list.unshift(ACCOUNT);
+  // main primero, luego alts por nombre
+  list.sort((a,b)=> (a.id===ACCOUNT.id?-1:b.id===ACCOUNT.id?1: (a.display_name||'').localeCompare(b.display_name||'')));
+  MY_CHARS = list;
+}
+function esMain(c){ return c && ACCOUNT && c.id===ACCOUNT.id; }
+async function switchChar(id){
+  const c = MY_CHARS.find(x=>x.id===id); if(!c) return;
+  ME = c;
+  try{ localStorage.setItem('warhalla_char', id); }catch(e){}
+  await loadAll(); render();
 }
 async function loadAll(){
   const [set, profs, evs, sus, dkp, auc, bid, ros, rmem, lres] = await Promise.all([
@@ -816,10 +849,11 @@ function render(){
         <div class="brand-txt"><h1>${esc(state.settings.guild_name||'Walhalla')}</h1><div class="sub">Mesa de Guerra</div></div>
       </div>
       <div class="whoami">
-        <div class="me">
+        <div class="me ${MY_CHARS.length>1?'has-chars':''}" ${MY_CHARS.length>1?'data-char-menu':''}>
           <div class="avatar" style="width:26px;height:26px;flex-basis:26px;font-size:11px">${av}</div>
           <span class="n">${esc(ME.display_name)}</span>
-          ${badgeCargo(ME)}
+          ${badgeCargo(ACCOUNT)}
+          ${MY_CHARS.length>1?`<span class="char-caret">${ic('M6 9l6 6 6-6')}</span>`:''}
         </div>
         <button class="icon-btn" id="logoutBtn" title="Salir">${ic('M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9')}</button>
       </div>
@@ -1547,7 +1581,7 @@ function viewRaids(){
             <div class="avatar" style="${e.type==='Raid'?'':'background:linear-gradient(180deg,var(--steel),#2a4257)'}">${e.type==='Raid'?'⚔':'✦'}</div>
             <div class="grow"><div class="name">${esc(e.title)}</div>
               <div class="sub-line"><span class="mono">${fmtDate(e.date)} · ${esc(e.time)}h</span>
-                ${mine?`<span class="chip ${mine==='conf'?'role-sanador':''}">${mine==='conf'?'Vas':mine==='susp'?'Suplente':mine==='tent'?'Tal vez':'No vas'}</span>`:'<span class="chip">Sin responder</span>'}</div></div>
+                ${mine?`<span class="chip ${mine==='conf'?'role-sanador':mine==='susp'?'role-support':''}">${mine==='conf'?'Confirmado':mine==='susp'?'Reserva':'Ausente'}</span>`:'<span class="chip">Sin responder</span>'}</div></div>
             <div style="text-align:right"><div class="dkp-val" style="color:var(--moss)">${c._total}</div><div class="muted" style="font-size:10.5px">confirmados</div></div>
           </div>`;}).join('')}</div>` : `<div class="empty muted">No hay convocatorias futuras.</div>`}
       </div></div>
@@ -1572,6 +1606,86 @@ function viewDKP(){
   </div>`;
 }
 
+/* ============================================================
+   PERSONAJES (main + alts). DKP separado por personaje.
+   ============================================================ */
+const MAX_CHARS = 5;  // main + 4 alts
+
+// Menú desplegable para cambiar de personaje (desde la cabecera)
+function charMenu(){
+  openModal(`<div class="modal"><div class="modal-h"><h3>Tus personajes</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b" style="padding-top:6px">
+      ${MY_CHARS.map(c=>{
+        const activo=c.id===ME.id, bal=balance(c.id);
+        return `<div class="char-row ${activo?'active':''}" ${activo?'':`data-switch-char="${c.id}"`}>
+          <div class="avatar" style="width:38px;height:38px;flex-basis:38px;font-size:15px">${c.avatar_url?`<img src="${esc(c.avatar_url)}">`:initials(c.display_name)}</div>
+          <div class="grow" style="min-width:0">
+            <div class="name" style="font-size:14.5px">${esc(c.display_name)} ${esMain(c)?'<span class="chip" style="padding:0 6px;font-size:10px">MAIN</span>':''}</div>
+            <div class="sub-line">
+              ${c.char_class?`<span class="chip" style="padding:1px 7px">${classIconHTML(c.char_class,c.spec)}${classNameHTML(c.char_class,c.spec)}</span>`:'<span class="muted" style="font-size:11.5px">Sin clase</span>'}
+              ${c.role?`<span class="chip ${roleClass(c.role)}" style="padding:1px 7px">${roleSvg(c.role)}${esc(c.role)}</span>`:''}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="dkp-val" style="font-size:15px">${bal}</div>
+            <div class="muted" style="font-size:10px">DKP</div>
+          </div>
+          ${activo?'<span class="chip role-sanador" style="margin-left:8px"><span class="dot"></span>Activo</span>':`<span class="btn sm" style="margin-left:8px">Usar</span>`}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="modal-f">
+      ${MY_CHARS.length<MAX_CHARS?`<button class="btn gold" data-new-char>${ic('M12 5v14M5 12h14')} Crear personaje</button>`:'<span class="muted" style="font-size:12px">Máximo '+MAX_CHARS+' personajes</span>'}
+      <button class="btn ghost" data-close>Cerrar</button>
+    </div></div>`,'form');
+}
+
+// Crear un alt
+function newCharModal(){
+  if(MY_CHARS.length>=MAX_CHARS){ toast('Ya tienes el máximo de personajes'); return; }
+  openModal(`<div class="modal"><div class="modal-h"><h3>Nuevo personaje</h3>
+      <button class="icon-btn" data-close>${ic('M18 6L6 18M6 6l12 12')}</button></div>
+    <div class="modal-b">
+      <div class="field"><label>Nombre del personaje</label><input id="ncName" placeholder="Nombre de tu alt en el juego"></div>
+      <div class="field"><label>Clase</label><select id="ncClass">${optionListVacia(classNames(),'','Elige clase')}</select></div>
+      <div class="field"><label>Especialización</label><select id="ncSpec"><option value="">— Elige clase primero —</option></select></div>
+      <div class="field" style="margin-bottom:0"><label>Rol</label><select id="ncRole">${optionListVacia(state.settings.roles,'','Elige rol')}</select></div>
+      <div class="note" style="margin-top:12px">Tu nuevo personaje empieza con <b>0 DKP</b> y su propio equipo. Podrás apuntarlo a rosters y raids por separado. Los detalles (raza, build...) los rellenas luego en su ficha.</div>
+    </div>
+    <div class="modal-f">
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn gold" data-save-char>${ic('M5 13l4 4L19 7')} Crear</button>
+    </div></div>`,'form');
+  const cs=$mroot.querySelector('#ncClass'), ss=$mroot.querySelector('#ncSpec');
+  if(cs) cs.addEventListener('change',()=>{ ss.innerHTML=optionListVacia(specsOf(cs.value),'','Elige spec'); });
+}
+async function saveChar(){
+  const name=($mroot.querySelector('#ncName').value||'').trim();
+  if(!name){ toast('Ponle nombre al personaje'); return; }
+  const id = (crypto&&crypto.randomUUID)?crypto.randomUUID():('id'+Date.now()+Math.random().toString(16).slice(2));
+  const row={ id, owner_id:ACCOUNT.id, display_name:name,
+    char_class:$mroot.querySelector('#ncClass').value||null,
+    spec:$mroot.querySelector('#ncSpec').value||null,
+    role:$mroot.querySelector('#ncRole').value||null };
+  const { error } = await sb.from('profiles').insert(row);
+  if(error){ toast(error.message,true); return; }
+  await loadMyChars();
+  closeModal();
+  await switchChar(id);   // pasamos a jugar con el nuevo
+  toast('Personaje creado. Ahora juegas con '+name);
+}
+async function deleteChar(id){
+  if(esMain({id})){ toast('No puedes borrar tu personaje principal'); return; }
+  const c=MY_CHARS.find(x=>x.id===id);
+  if(!confirm(`¿Borrar el personaje "${c?c.display_name:''}"? Se pierde su DKP y sus datos. Esto no se puede deshacer.`)) return;
+  const { error } = await sb.from('profiles').delete().eq('id',id);
+  if(error){ toast(error.message,true); return; }
+  if(ME.id===id){ ME=ACCOUNT; try{ localStorage.setItem('warhalla_char',ACCOUNT.id); }catch(e){} }
+  await loadMyChars(); await loadAll();
+  closeModal(); render(); toast('Personaje borrado');
+}
+
 function viewMiCuenta(){
   const bal=balance(ME.id);
   const log=[...state.dkpLog].filter(l=>l.user_id===ME.id).sort((a,b)=>(a.created_at||'').localeCompare(b.created_at||'')).reverse();
@@ -1585,6 +1699,24 @@ function viewMiCuenta(){
     <div class="grid g-3" style="margin-bottom:16px">
       ${stat('DKP disponible',bal)} ${stat('Ganado',earned)} ${stat('Gastado',Math.abs(spent))}
     </div>
+
+    <div class="panel" style="margin-bottom:16px"><div class="panel-h">
+        <h3><span class="rune">ᛗ</span> Mis personajes</h3>
+        ${MY_CHARS.length<MAX_CHARS?`<button class="btn sm gold" data-new-char>${ic('M12 5v14M5 12h14')} Crear personaje</button>`:'<span class="muted" style="font-size:11.5px">Máximo '+MAX_CHARS+'</span>'}</div>
+      <div class="panel-b" style="padding:6px 8px">
+        <div class="rows">${MY_CHARS.map(c=>{
+          const activo=c.id===ME.id;
+          return `<div class="row">
+            <div class="avatar" style="width:34px;height:34px;flex-basis:34px;font-size:13px">${c.avatar_url?`<img src="${esc(c.avatar_url)}">`:initials(c.display_name)}</div>
+            <div class="grow" style="min-width:0"><div class="name" style="font-size:14px">${esc(c.display_name)} ${esMain(c)?'<span class="chip" style="padding:0 6px;font-size:10px">MAIN</span>':''} ${activo?'<span class="chip role-sanador" style="padding:0 7px"><span class="dot"></span>activo</span>':''}</div>
+              <div class="sub-line">${c.char_class?`<span class="chip" style="padding:1px 7px">${classIconHTML(c.char_class,c.spec)}${classNameHTML(c.char_class,c.spec)}</span>`:'<span class="muted" style="font-size:11.5px">Sin clase</span>'}${c.role?`<span class="chip ${roleClass(c.role)}" style="padding:1px 7px">${roleSvg(c.role)}${esc(c.role)}</span>`:''}</div></div>
+            <div style="text-align:right;margin-right:6px"><div class="dkp-val" style="font-size:15px">${balance(c.id)}</div><div class="muted" style="font-size:10px">DKP</div></div>
+            ${!activo?`<button class="btn sm" data-switch-char="${c.id}">Usar</button>`:''}
+            ${!esMain(c)?`<button class="icon-btn" data-delete-char="${c.id}" title="Borrar personaje">${ic('M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6')}</button>`:''}
+          </div>`;
+        }).join('')}</div>
+        <div class="note" style="margin-top:8px;font-size:11.5px">Cada personaje tiene su <b>DKP propio</b>. Cambia de personaje aquí o desde tu nombre arriba. Para jugar una raid, ponte con el personaje que vayas a usar y apúntate con él.</div>
+      </div></div>
     <div class="grid g-2">
       <div class="panel"><div class="panel-h"><h3><span class="rune">ᛜ</span> Mis objetos obtenidos</h3><span class="muted" style="font-size:12px">${items.length}</span></div>
         <div class="panel-b" style="padding:6px 8px">${items.length? `<div class="rows">${items.map(l=>`
@@ -1955,9 +2087,12 @@ async function saveMember(id){
   const { error } = await sb.from('profiles').update(patch).eq('id', id);
   if(error){ toast(error.message,true); return; }
   closeModal();
-  if(id===ME.id){ ME={...ME,...patch}; IS_ADMIN=!!ME.is_admin;
-    CAN_RAID=!!(ME.is_admin||ME.is_officer||ME.is_raidlead);
-    CAN_LOOT=!!(ME.is_admin||ME.is_officer||ME.is_looter); }
+  if(id===ME.id){ ME={...ME,...patch}; }
+  if(ACCOUNT && id===ACCOUNT.id){ ACCOUNT={...ACCOUNT,...patch};
+    IS_ADMIN=!!ACCOUNT.is_admin;
+    CAN_RAID=!!(ACCOUNT.is_admin||ACCOUNT.is_officer||ACCOUNT.is_raidlead);
+    CAN_LOOT=!!(ACCOUNT.is_admin||ACCOUNT.is_officer||ACCOUNT.is_looter); }
+  await loadMyChars();
   await refetch('profiles'); toast('Ficha guardada');
 }
 async function delMember(id){
@@ -2013,7 +2148,7 @@ async function delEvent(id){
   closeModal(); await refetch('events'); toast('Evento cancelado');
 }
 
-const STAT=[['conf','Voy'],['susp','Suplente'],['tent','Tal vez'],['aus','No voy']];
+const STAT=[['conf','Confirmado'],['aus','Ausente'],['susp','Reserva']];
 function eventDetailModal(id){
   const e=state.events.find(x=>x.id===id); if(!e){ closeModal(); return; }
   const c=signCounts(e);
@@ -2323,6 +2458,12 @@ document.addEventListener('click',e=>{
   const act=t.closest('[data-act]'); if(act){ handleAct(act.dataset.act); return; }
   if(t.closest('[data-close]')){ closeModal(); return; }
   if(t.closest('[data-edit-me]')){ memberModal(ME.id); return; }
+  // --- Personajes / alts ---
+  if(t.closest('[data-char-menu]')){ charMenu(); return; }
+  const swc=t.closest('[data-switch-char]'); if(swc){ closeModal(); switchChar(swc.dataset.switchChar); return; }
+  if(t.closest('[data-new-char]')){ newCharModal(); return; }
+  if(t.closest('[data-save-char]')){ saveChar(); return; }
+  const delc=t.closest('[data-delete-char]'); if(delc){ deleteChar(delc.dataset.deleteChar); return; }
   const oe=t.closest('[data-open-event]'); if(oe){ eventDetailModal(oe.dataset.openEvent); return; }
   const day=t.closest('[data-day]'); if(day && CAN_RAID && !t.closest('[data-open-event]')){ eventModal({type:'Raid',title:'',date:day.dataset.day,time:'21:00',size:20,dkp:state.settings.dkp_default,notes:''}); return; }
   const em=t.closest('[data-edit-member]'); if(em){ memberModal(em.dataset.editMember); return; }
