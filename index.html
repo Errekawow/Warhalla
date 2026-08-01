@@ -218,6 +218,7 @@
   .av-tag.av-conf{color:#8fd68f;border-color:rgba(95,191,95,.5);background:rgba(95,191,95,.1)}
   .av-tag.av-aus{color:#e79a92;border-color:rgba(224,90,90,.5);background:rgba(224,90,90,.1)}
   .av-tag.av-susp{color:#e4c46e;border-color:rgba(228,196,110,.5);background:rgba(228,196,110,.1)}
+  .av-src{font-size:10.5px;color:var(--muted);align-self:center;margin-right:2px;font-style:italic}
   @media(max-width:640px){ .avail-opts{grid-template-columns:1fr} }
   .person-chip .pc-name{font-weight:500}
   .person-chip .role-svg{width:15px;height:15px;flex:0 0 15px;margin-left:1px}
@@ -1032,6 +1033,20 @@ function weekKey(d){ const x=new Date(d||Date.now()); const off=(x.getDay()+6)%7
 // Disponibilidad de un miembro ESTA semana (si es de otra semana, cuenta como sin marcar).
 function availOf(m){ return (m && m.avail && m.avail_week===weekKey()) ? m.avail : null; }
 function availByUser(rid,uid){ const m=(state.rmembers||[]).find(x=>x.roster_id===rid&&x.user_id===uid); return availOf(m); }
+// Próximo evento del calendario (la raid más cercana que viene).
+function nextEvent(){ const u=upcoming(); return u.length?u[0]:null; }
+// Estado de inscripción de alguien en un evento (conf/aus/susp) o null.
+function signupStatus(uid, eid){ const s=state.signups.find(x=>x.event_id===eid && x.user_id===uid); return s?s.status:null; }
+// Disponibilidad EFECTIVA en el roster:
+//   1) tu marca del roster de esta semana manda (puedes cambiarla cuando quieras)
+//   2) si no la has tocado, refleja tu inscripción del PRÓXIMO evento del calendario
+function effectiveAvail(m){
+  const ov = availOf(m);           // marca propia del roster (esta semana)
+  if(ov) return { st:ov, src:'roster' };
+  const ev = nextEvent();
+  if(ev){ const st=signupStatus(m.user_id, ev.id); if(st) return { st, src:'cal', ev }; }
+  return { st:null, src:null };
+}
 function myTier(rid){ const m=(state.rmembers||[]).find(x=>x.roster_id===rid && x.user_id===ME.id); return m?tierOf(m):null; }
 // Composición de roles de un grupo, para montar la comp de un vistazo
 function compDe(lista){
@@ -1288,7 +1303,7 @@ function rosterCard(r){
       ${lista.length? `<div class="chip-people">${lista.map(m=>{
         const p=profileById(m.user_id); if(!p) return '';
         const puedo = CAN_RAID || p.id===ME.id;   // dirección: cualquiera · jugador: la suya
-        return personChip(p, { clickable:puedo, avail:availOf(m), act:puedo?`${r.id}:${p.id}`:null, info:!puedo?p.id:null });
+        return personChip(p, { clickable:puedo, avail:effectiveAvail(m).st, act:puedo?`${r.id}:${p.id}`:null, info:!puedo?p.id:null });
       }).join('')}</div>` : `<p class="tier-empty">Nadie por ahora.</p>`}
     </div>`;
   };
@@ -1298,8 +1313,10 @@ function rosterCard(r){
       <div style="flex:1;min-width:0">
         <h3 style="color:${esc(col)}">${esc(r.name)}</h3>
         ${r.descr?`<div class="muted" style="font-size:12.5px;margin-top:2px">${esc(r.descr)}</div>`:''}
-        ${(()=>{ const ms=membersOf(r.id); const c=ms.filter(m=>availOf(m)==='conf').length, a=ms.filter(m=>availOf(m)==='aus').length, s2=ms.filter(m=>availOf(m)==='susp').length;
-          return (c||a||s2)?`<div class="avail-summary">${c?`<span class="av-tag av-conf">${c} van</span>`:''}${a?`<span class="av-tag av-aus">${a} no</span>`:''}${s2?`<span class="av-tag av-susp">${s2} reserva</span>`:''}</div>`:''; })()}
+        ${(()=>{ const ms=membersOf(r.id); const ef=ms.map(m=>effectiveAvail(m).st);
+          const c=ef.filter(x=>x==='conf').length, a=ef.filter(x=>x==='aus').length, s2=ef.filter(x=>x==='susp').length;
+          const ev=nextEvent();
+          return (c||a||s2)?`<div class="avail-summary">${ev?`<span class="av-src">para ${esc(ev.title)}</span>`:''}${c?`<span class="av-tag av-conf">${c} van</span>`:''}${a?`<span class="av-tag av-aus">${a} no</span>`:''}${s2?`<span class="av-tag av-susp">${s2} reserva</span>`:''}</div>`:''; })()}
       </div>
       <span class="chip">${total} en el roster</span>
       ${CAN_RAID?`<button class="icon-btn" data-edit-roster="${r.id}" title="Editar">${ic('M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z')}</button>`:''}
@@ -1317,7 +1334,7 @@ function rosterCard(r){
       ${grupo(resto,'Resto del roster','tier-rest',
         `<span class="tier-count">${resto.length}</span>`)}
 
-      <p class="muted" style="font-size:11.5px;margin:10px 0 0">Pulsa tu nombre para marcar si vas esta semana: verde vas, rojo no, amarillo reserva.${CAN_RAID?' Como direccion, puedes marcar a cualquiera y moverlo de grupo.':''}</p>
+      <p class="muted" style="font-size:11.5px;margin:10px 0 0">Las placas reflejan tu inscripción del próximo evento del calendario (verde vas, rojo no, amarillo reserva). Pulsa tu nombre para cambiarlo desde aquí.${CAN_RAID?' Como direccion, puedes marcar a cualquiera y moverlo de grupo.':''}</p>
 
       ${CAN_RAID && pend.length? `<div style="margin-top:16px">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--gold);font-weight:700;margin-bottom:8px">Solicitudes (${pend.length})</div>
@@ -1424,7 +1441,9 @@ function tierModal(rid, uid){
   if(!r||!p) return;
   const m=(state.rmembers||[]).find(x=>x.roster_id===rid && x.user_id===uid);
   const actual=tierOf(m);
-  const av=availOf(m);                    // disponibilidad de esta semana
+  const eff=effectiveAvail(m);            // efectiva (roster manda; si no, calendario)
+  const av=eff.st;                        // para resaltar el botón activo
+  const desdeCal = eff.src==='cal';       // viene del calendario, sin marca propia
   const cap=r.capacity||null;
   const nTit=membersTier(rid,'starter').length;
   const lleno = cap && nTit>=cap && actual!=='starter';
@@ -1449,7 +1468,8 @@ function tierModal(rid, uid){
           <button class="avail-opt av-aus ${av==='aus'?'sel':''}" data-set-avail="${rid}:${uid}:aus">${ic('M18 6L6 18M6 6l12 12')} Ausente</button>
           <button class="avail-opt av-susp ${av==='susp'?'sel':''}" data-set-avail="${rid}:${uid}:susp">${ic('M12 8v4l3 2M12 3a9 9 0 100 18 9 9 0 000-18z')} Reserva</button>
         </div>
-        ${av?`<button class="btn sm ghost" data-set-avail="${rid}:${uid}:" style="margin-top:8px">Quitar mi marca</button>`:''}
+        ${desdeCal && eff.ev?`<div class="note" style="margin-top:8px;font-size:11.5px">Viene de tu inscripción en <b>${esc(eff.ev.title)}</b> (calendario). Si marcas aquí, mandará tu elección del roster esta semana.</div>`:''}
+        ${(av && !desdeCal)?`<button class="btn sm ghost" data-set-avail="${rid}:${uid}:" style="margin-top:8px">Quitar mi marca (volver al calendario)</button>`:''}
       </div>`:''}
 
       ${CAN_RAID?`<div class="field" style="margin-top:4px"><label>Grupo <span class="lock">(solo dirección)</span></label>
